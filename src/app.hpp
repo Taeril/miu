@@ -13,6 +13,8 @@ class App {
 		int run();
 	private:
 		Config config;
+
+		void process_static(std::string const& src, std::string const& dst);
 };
 
 } // namespace miu
