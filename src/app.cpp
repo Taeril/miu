@@ -60,21 +60,22 @@ void write_file(fs::path const& path, std::string const& data) {
 
 using mtime_t = decltype(fs::last_write_time(""));
 
-std::tuple<mtime_t, std::string> get_mtime(fs::path const& path) {
-	auto ftime = fs::last_write_time(path);
-	std::time_t cftime = decltype(ftime)::clock::to_time_t(ftime);
-	std::string datetime = fmt::format("{:%Y-%m-%dT%H:%M:%SZ}", *gmtime(&cftime));
+mtime_t get_mtime(fs::path const& path) {
+	return fs::last_write_time(path);
+}
 
-	return make_tuple(ftime, datetime);
+std::string format_mtime(mtime_t mtime) {
+	std::time_t cftime = mtime_t::clock::to_time_t(mtime);
+	return fmt::format("{:%Y-%m-%dT%H:%M:%SZ}", *gmtime(&cftime));
 }
 
 void App::update_file(std::string const& info,
 	fs::path const& src, fs::path const& dst) {
 
-	auto [src_mtime, src_datetime] = get_mtime(src);
+	auto src_mtime = get_mtime(src);
 
 	if(!config.rebuild && fs::exists(dst)) {
-		auto [dst_mtime, dst_datetime] = get_mtime(dst);
+		auto dst_mtime = get_mtime(dst);
 
 		if(src_mtime > dst_mtime) {
 			fmt::print("UPDATE: {}\n", info);
@@ -92,10 +93,10 @@ void App::update_file(std::string const& info,
 void App::create_file(std::string const& info, std::string const& data,
 	fs::path const& src, fs::path const& dst) {
 
-	auto [src_mtime, src_datetime] = get_mtime(src);
+	auto src_mtime = get_mtime(src);
 
 	if(!config.rebuild && fs::exists(dst)) {
-		auto [dst_mtime, dst_datetime] = get_mtime(dst);
+		auto dst_mtime = get_mtime(dst);
 
 		if(src_mtime > dst_mtime) {
 			fmt::print("UPDATE: {}\n", info);
@@ -186,7 +187,8 @@ void App::process_mkd(std::string const& src, std::string const& dst) {
 		auto info = base / "index.html";
 		auto dst = destination / info;
 		
-		auto [src_mtime, src_datetime] = get_mtime(p.path());
+		auto src_mtime = get_mtime(p.path());
+		auto src_datetime = format_mtime(src_mtime);
 		if(auto created = meta.get("created"); !created) {
 			meta.set("created", src_datetime);
 		} else if(created->value != src_datetime) {
