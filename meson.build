@@ -22,6 +22,10 @@ fmt_dep = dependency('fmt', fallback: ['fmt', 'fmt_dep'])
 
 kvc_dep = dependency('kvc', fallback: ['kvc', 'kvc_dep'])
 
+mkd_dep = dependency('mkd', fallback: ['mkd', 'mkd_dep'])
+
+tmpl_dep = dependency('tmpl', fallback: ['tmpl', 'tmpl_dep'])
+
 message('libdir: ' + get_option('libdir'))
 
 subdir('src')

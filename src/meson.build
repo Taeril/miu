@@ -22,7 +22,7 @@ sources = files([
 miu_exe = executable('miu', sources,
   install : true,
   gnu_symbol_visibility : 'hidden',
-  dependencies: [fmt_dep, kvc_dep],
+  dependencies: [fmt_dep, kvc_dep, mkd_dep, tmpl_dep],
   include_directories: '.',
 )
 
