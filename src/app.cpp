@@ -13,7 +13,6 @@
 #include <kvc/kvc.hpp>
 #include <mkd/mkd.hpp>
 
-#include "filesystem.hpp"
 
 // formatter for fs::path
 // because using fmt/ostream.h would surround path with quotes
@@ -69,12 +68,12 @@ std::tuple<mtime_t, std::string> get_mtime(fs::path const& path) {
 	return make_tuple(ftime, datetime);
 }
 
-void update_file(std::string const& info,
-	fs::path const& src, fs::path const& dst, bool rebuild=false) {
+void App::update_file(std::string const& info,
+	fs::path const& src, fs::path const& dst) {
 
 	auto [src_mtime, src_datetime] = get_mtime(src);
 
-	if(!rebuild && fs::exists(dst)) {
+	if(!config.rebuild && fs::exists(dst)) {
 		auto [dst_mtime, dst_datetime] = get_mtime(dst);
 
 		if(src_mtime > dst_mtime) {
@@ -90,12 +89,12 @@ void update_file(std::string const& info,
 	fs::copy_file(src, dst, fs::copy_options::update_existing);
 }
 
-void create_file(std::string const& info, std::string const& data,
-	fs::path const& src, fs::path const& dst, bool rebuild=false) {
+void App::create_file(std::string const& info, std::string const& data,
+	fs::path const& src, fs::path const& dst) {
 
 	auto [src_mtime, src_datetime] = get_mtime(src);
 
-	if(!rebuild && fs::exists(dst)) {
+	if(!config.rebuild && fs::exists(dst)) {
 		auto [dst_mtime, dst_datetime] = get_mtime(dst);
 
 		if(src_mtime > dst_mtime) {
@@ -122,7 +121,7 @@ void App::process_static(std::string const& src, std::string const& dst) {
 		auto path = p.path().lexically_relative(src);
 		auto file = destination / path;
 
-		update_file(path, p.path(), file, config.rebuild);
+		update_file(path, p.path(), file);
 	}
 }
 
@@ -239,13 +238,13 @@ void App::process_mkd(std::string const& src, std::string const& dst) {
 		write_file(p.path(), separator + meta.to_string() + separator + md);
 		fs::last_write_time(p.path(), src_mtime);
 
-		create_file(info, tmpl.make(), p.path(), dst, config.rebuild);
+		create_file(info, tmpl.make(), p.path(), dst);
 
 		for(auto const& code : parser.codes()) {
 			auto [file, data] = code;
 			auto finfo = base / file;
 			auto fpath = destination / finfo;
-			create_file(finfo, data, p.path(), fpath, config.rebuild);
+			create_file(finfo, data, p.path(), fpath);
 		}
 
 
@@ -255,7 +254,7 @@ void App::process_mkd(std::string const& src, std::string const& dst) {
 				auto src_file = src_dir / file;
 				auto finfo = base / file;
 				auto dst_file = destination / finfo;
-				update_file(finfo, src_file, dst_file, config.rebuild);
+				update_file(finfo, src_file, dst_file);
 			}
 		}
 	}

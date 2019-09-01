@@ -7,6 +7,8 @@
 
 #include "config.hpp"
 
+#include "filesystem.hpp"
+
 namespace miu {
 
 class App {
@@ -22,6 +24,11 @@ class App {
 		tmpl::Template page_tmpl;
 		tmpl::Template entry_tmpl;
 		tmpl::Template feed_tmpl;
+
+		void update_file(std::string const& info,
+			fs::path const& src, fs::path const& dst);
+		void create_file(std::string const& info, std::string const& data,
+			fs::path const& src, fs::path const& dst);
 
 		void process_static(std::string const& src, std::string const& dst);
 		void process_mkd(std::string const& src, std::string const& dst);
