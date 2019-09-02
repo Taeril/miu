@@ -26,6 +26,8 @@ mkd_dep = dependency('mkd', fallback: ['mkd', 'mkd_dep'])
 
 tmpl_dep = dependency('tmpl', fallback: ['tmpl', 'tmpl_dep'])
 
+sqlite_dep = dependency('sqlite3', fallback: ['sqlite', 'sqlite_dep'])
+
 message('libdir: ' + get_option('libdir'))
 
 subdir('src')

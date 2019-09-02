@@ -13,7 +13,17 @@ configure_file(
 )
 
 
+prog_python = import('python').find_installation('python3')
+bin2h_py = join_paths(meson.current_source_dir(), 'bin2h.py')
+db_sql = join_paths(meson.current_source_dir(), 'db.sql')
+configure_file(
+  output: 'sql.h',
+  command: [prog_python, bin2h_py, '-i', db_sql, '-o', 'sql.h', '-n', 'sql'],
+)
+
+
 sources = files([
+  'cache.cpp',
   'config.cpp',
   'app.cpp',
   'main.cpp',
@@ -22,7 +32,7 @@ sources = files([
 miu_exe = executable('miu', sources,
   install : true,
   gnu_symbol_visibility : 'hidden',
-  dependencies: [fmt_dep, kvc_dep, mkd_dep, tmpl_dep],
+  dependencies: [fmt_dep, kvc_dep, mkd_dep, tmpl_dep, sqlite_dep],
   include_directories: '.',
 )
 

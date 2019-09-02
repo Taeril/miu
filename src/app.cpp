@@ -29,10 +29,20 @@ struct formatter<fs::path> {
 };
 }
 
+namespace {
+	std::string const& cond_rm(std::string const& file, bool rebuild) {
+		if(rebuild) {
+			fs::remove(file);
+		}
+		return file;
+	}
+}
 
 namespace miu {
 
-App::App(int argc, char** argv) : config(argc, argv) {
+App::App(int argc, char** argv) : config(argc, argv),
+	cache(cond_rm(config.cache_db, config.rebuild)) {
+
 	std::string header = read_file(config.template_dir + "/header.tmpl");
 	std::string footer = read_file(config.template_dir + "/footer.tmpl");
 
@@ -58,8 +68,6 @@ void write_file(fs::path const& path, std::string const& data) {
 	out.write(data.c_str(), data.size());
 }
 
-using mtime_t = decltype(fs::last_write_time(""));
-
 mtime_t get_mtime(fs::path const& path) {
 	return fs::last_write_time(path);
 }
@@ -69,7 +77,7 @@ std::string format_mtime(mtime_t mtime) {
 	return fmt::format("{:%Y-%m-%dT%H:%M:%SZ}", *gmtime(&cftime));
 }
 
-void App::update_file(std::string const& info,
+mtime_t App::update_file(std::string const& info,
 	fs::path const& src, fs::path const& dst) {
 
 	auto src_mtime = get_mtime(src);
@@ -80,7 +88,7 @@ void App::update_file(std::string const& info,
 		if(src_mtime > dst_mtime) {
 			fmt::print("UPDATE: {}\n", info);
 		} else {
-			return;
+			return mtime_t::min();
 		}
 	} else {
 		fmt::print("COPY: {}\n", info);
@@ -88,9 +96,11 @@ void App::update_file(std::string const& info,
 
 	fs::create_directories(dst.parent_path());
 	fs::copy_file(src, dst, fs::copy_options::update_existing);
+
+	return src_mtime;
 }
 
-void App::create_file(std::string const& info, std::string const& data,
+mtime_t App::create_file(std::string const& info, std::string const& data,
 	fs::path const& src, fs::path const& dst) {
 
 	auto src_mtime = get_mtime(src);
@@ -101,7 +111,7 @@ void App::create_file(std::string const& info, std::string const& data,
 		if(src_mtime > dst_mtime) {
 			fmt::print("UPDATE: {}\n", info);
 		} else {
-			return;
+			return mtime_t::min();
 		}
 	} else {
 		fmt::print("CREATE: {}\n", info);
@@ -109,6 +119,8 @@ void App::create_file(std::string const& info, std::string const& data,
 
 	fs::create_directories(dst.parent_path());
 	write_file(dst, data);
+
+	return src_mtime;
 }
 
 void App::process_static(std::string const& src, std::string const& dst) {
@@ -122,7 +134,21 @@ void App::process_static(std::string const& src, std::string const& dst) {
 		auto path = p.path().lexically_relative(src);
 		auto file = destination / path;
 
-		update_file(path, p.path(), file);
+		auto mtime = update_file(path, p.path(), file);
+		if(mtime != mtime_t::min()) {
+			auto sql_path = cache.path_id(path.parent_path());
+			Entry entry;
+			entry.type = Type::Static;
+			entry.source = path;//p.path().string();
+			entry.path = sql_path;
+			entry.slug = {};
+			entry.file = path.string();
+			entry.title = {};
+			entry.datetime = format_mtime(mtime);
+			entry.update = false;
+
+			cache.add_entry(entry);
+		}
 	}
 }
 
@@ -240,13 +266,42 @@ void App::process_mkd(std::string const& src, std::string const& dst) {
 		write_file(p.path(), separator + meta.to_string() + separator + md);
 		fs::last_write_time(p.path(), src_mtime);
 
-		create_file(info, tmpl.make(), p.path(), dst);
+		auto md_mtime = create_file(info, tmpl.make(), p.path(), dst);
+		if(md_mtime != mtime_t::min()) {
+			auto sql_path = cache.path_id(base.parent_path());
+			Entry entry;
+			entry.type = is_page ? Type::Page : Type::Entry;
+			entry.source = info;//p.path().string();
+			entry.path = sql_path;
+			entry.slug = slug;
+			entry.file = "index.html";
+			entry.title = title;
+			entry.datetime = format_mtime(md_mtime);
+			entry.update = false;
+
+			cache.add_entry(entry);
+		}
 
 		for(auto const& code : parser.codes()) {
 			auto [file, data] = code;
 			auto finfo = base / file;
 			auto fpath = destination / finfo;
-			create_file(finfo, data, p.path(), fpath);
+
+			auto code_mtime = create_file(finfo, data, p.path(), fpath);
+			if(code_mtime != mtime_t::min()) {
+				auto sql_path = cache.path_id(base.parent_path());
+				Entry entry;
+				entry.type = Type::Source;
+				entry.source = finfo;//p.path().string();
+				entry.path = sql_path;
+				entry.slug = slug;
+				entry.file = file;
+				entry.title = {};
+				entry.datetime = format_mtime(code_mtime);
+				entry.update = false;
+
+				cache.add_entry(entry);
+			}
 		}
 
 
@@ -256,7 +311,22 @@ void App::process_mkd(std::string const& src, std::string const& dst) {
 				auto src_file = src_dir / file;
 				auto finfo = base / file;
 				auto dst_file = destination / finfo;
-				update_file(finfo, src_file, dst_file);
+
+				auto file_mtime = update_file(finfo, src_file, dst_file);
+				if(file_mtime != mtime_t::min()) {
+					auto sql_path = cache.path_id(base.parent_path());
+					Entry entry;
+					entry.type = Type::File;
+					entry.source = finfo;//src_file;
+					entry.path = sql_path;
+					entry.slug = slug;
+					entry.file = file;
+					entry.title = {};
+					entry.datetime = format_mtime(file_mtime);
+					entry.update = false;
+
+					cache.add_entry(entry);
+				}
 			}
 		}
 	}
