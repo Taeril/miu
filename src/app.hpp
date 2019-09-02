@@ -34,8 +34,8 @@ class App {
 		mtime_t create_file(std::string const& info, std::string const& data,
 			fs::path const& src, fs::path const& dst);
 
-		void process_static(std::string const& src, std::string const& dst);
-		void process_mkd(std::string const& src, std::string const& dst);
+		void process_static();
+		void process_mkd();
 };
 
 } // namespace miu

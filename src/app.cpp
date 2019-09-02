@@ -57,8 +57,8 @@ App::~App() {
 }
 
 int App::run() {
-	process_static(config_.static_dir, config_.destination_dir);
-	process_mkd(config_.source_dir, config_.destination_dir);
+	process_static();
+	process_mkd();
 
 	return 0;
 }
@@ -123,15 +123,15 @@ mtime_t App::create_file(std::string const& info, std::string const& data,
 	return src_mtime;
 }
 
-void App::process_static(std::string const& src, std::string const& dst) {
-	auto destination = fs::path(dst);
+void App::process_static() {
+	auto destination = fs::path(config_.destination_dir);
 
-	for(auto const& p : fs::recursive_directory_iterator(src)) {
+	for(auto const& p : fs::recursive_directory_iterator(config_.static_dir)) {
 		if(!p.is_regular_file()) {
 			continue;
 		}
 
-		auto path = p.path().lexically_relative(src);
+		auto path = p.path().lexically_relative(config_.static_dir);
 		auto file = destination / path;
 
 		auto mtime = update_file(path, p.path(), file);
@@ -152,10 +152,10 @@ void App::process_static(std::string const& src, std::string const& dst) {
 	}
 }
 
-void App::process_mkd(std::string const& src, std::string const& dst) {
-	auto destination = fs::path(dst);
+void App::process_mkd() {
+	auto destination = fs::path(config_.destination_dir);
 
-	for(auto const& p : fs::recursive_directory_iterator(src)) {
+	for(auto const& p : fs::recursive_directory_iterator(config_.source_dir)) {
 		if(!p.is_regular_file()) {
 			continue;
 		}
@@ -192,7 +192,7 @@ void App::process_mkd(std::string const& src, std::string const& dst) {
 		auto root = tmpl.data();
 		root->clear();
 
-		auto path = p.path().lexically_relative(src);
+		auto path = p.path().lexically_relative(config_.source_dir);
 
 		std::string title = meta.get_value("title", parser.title());
 		std::string slug = meta.get_value("slug", parser.slug());
