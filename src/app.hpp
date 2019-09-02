@@ -18,16 +18,16 @@ class App {
 	public:
 		App(int argc, char** argv);
 		~App();
-		
+
 		int run();
 	private:
-		Config config;
-		Cache cache;
-		tmpl::Template index_tmpl;
-		tmpl::Template list_tmpl;
-		tmpl::Template page_tmpl;
-		tmpl::Template entry_tmpl;
-		tmpl::Template feed_tmpl;
+		Config config_;
+		Cache cache_;
+		tmpl::Template index_tmpl_;
+		tmpl::Template list_tmpl_;
+		tmpl::Template page_tmpl_;
+		tmpl::Template entry_tmpl_;
+		tmpl::Template feed_tmpl_;
 
 		mtime_t update_file(std::string const& info,
 			fs::path const& src, fs::path const& dst);
