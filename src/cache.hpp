@@ -41,6 +41,7 @@ class Cache {
 		sqlite3_int64 tag_id(std::string const& tag);
 
 		sqlite3_int64 add_entry(Entry const& entry);
+		void add_tag(sqlite3_int64 entry, std::string const& tag);
 
 	private:
 		std::string path_;

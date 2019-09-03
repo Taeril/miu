@@ -198,7 +198,7 @@ sqlite3_int64 Cache::path_id(std::string const& path) {
 sqlite3_int64 Cache::tag_id(std::string const& tag) {
 	const char sql_insert[] = "INSERT OR IGNORE INTO tags(name) VALUES(?)";
 	constexpr const int sql_insert_len = length(sql_insert);
-	const char sql_select[] = "SELECT id FROM tagss WHERE name = ?";
+	const char sql_select[] = "SELECT id FROM tags WHERE name = ?";
 	constexpr const int sql_select_len = length(sql_select);
 
 	return get_id(tag, sql_insert, sql_insert_len, sql_select, sql_select_len);
@@ -279,5 +279,25 @@ sqlite3_int64 Cache::add_entry(Entry const& entry) {
 	err_exit("add_entry(step select)", rc);
 
 	return 0;
+}
+
+void Cache::add_tag(sqlite3_int64 entry, std::string const& tag) {
+	const char sql_upsert[] = R"~(
+		INSERT INTO tagged_entries(tag, entry) VALUES(?, ?)
+	)~";
+	constexpr const int sql_upsert_len = length(sql_upsert);
+
+	sqlite3_stmt* stmt = nullptr;
+	prepare_or_exit(sql_upsert, sql_upsert_len, &stmt, nullptr,
+		"add_tag(prepare)");
+
+	bind_or_exit(stmt, 1, tag_id(tag), "add_tag(bind tag)");
+	bind_or_exit(stmt, 2, entry, "add_tag(bind entry)");
+
+	int rc = sqlite3_step(stmt);
+	sqlite3_finalize(stmt);
+	if(rc != SQLITE_DONE) {
+		err_exit("add_tag(step)", rc);
+	}
 }
 

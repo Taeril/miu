@@ -279,7 +279,17 @@ void App::process_mkd() {
 			entry.datetime = format_mtime(md_mtime);
 			entry.update = false;
 
-			cache_.add_entry(entry);
+			auto entry_id = cache_.add_entry(entry);
+
+			if(!is_page) {
+				paths_.insert(sql_path);
+				if(tags && tags->is_array) {
+					for(auto const& tag : tags->values) {
+						cache_.add_tag(entry_id, tag);
+						tags_.insert(tag);
+					}
+				}
+			}
 		}
 
 		for(auto const& code : parser.codes()) {

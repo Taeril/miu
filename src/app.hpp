@@ -2,6 +2,7 @@
 #define HEADER_APP_HPP
 
 #include <string>
+#include <unordered_set>
 
 #include <tmpl/tmpl.hpp>
 
@@ -28,6 +29,8 @@ class App {
 		tmpl::Template page_tmpl_;
 		tmpl::Template entry_tmpl_;
 		tmpl::Template feed_tmpl_;
+		std::unordered_set<sqlite3_int64> paths_;
+		std::unordered_set<std::string> tags_;
 
 		mtime_t update_file(std::string const& info,
 			fs::path const& src, fs::path const& dst);
