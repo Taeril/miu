@@ -139,7 +139,7 @@ void App::process_static() {
 			auto sql_path = cache_.path_id(path.parent_path());
 			Entry entry;
 			entry.type = Type::Static;
-			entry.source = path;//p.path().string();
+			entry.source = path;
 			entry.path = sql_path;
 			entry.slug = {};
 			entry.file = path.string();
@@ -271,7 +271,7 @@ void App::process_mkd() {
 			auto sql_path = cache_.path_id(base.parent_path());
 			Entry entry;
 			entry.type = is_page ? Type::Page : Type::Entry;
-			entry.source = info;//p.path().string();
+			entry.source = path;
 			entry.path = sql_path;
 			entry.slug = slug;
 			entry.file = "index.html";
@@ -302,7 +302,7 @@ void App::process_mkd() {
 				auto sql_path = cache_.path_id(base.parent_path());
 				Entry entry;
 				entry.type = Type::Source;
-				entry.source = finfo;//p.path().string();
+				entry.source = path;
 				entry.path = sql_path;
 				entry.slug = slug;
 				entry.file = file;
@@ -327,7 +327,7 @@ void App::process_mkd() {
 					auto sql_path = cache_.path_id(base.parent_path());
 					Entry entry;
 					entry.type = Type::File;
-					entry.source = finfo;//src_file;
+					entry.source = src_file.lexically_relative(config_.source_dir);
 					entry.path = sql_path;
 					entry.slug = slug;
 					entry.file = file;
