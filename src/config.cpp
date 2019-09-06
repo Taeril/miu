@@ -176,6 +176,19 @@ Config::Config(int argc, char** argv) {
 
 	fmt::print("cfg:\n{}\n", cfg.to_string());
 #endif
+
+	auto base_url = cfg.get_value("base_url", "/");
+	if(base_url.back() != '/') {
+		base_url += '/';
+	}
+	cfg.set("base_url", base_url);
+
+	cfg.add_new("author", "Unknown");
+	cfg.add_new("home_name", "Home");
+	cfg.add_new("tags_name", "Tags");
+
+	cfg.set("home_url", base_url);
+	cfg.set("tags_url", base_url + "tags");
 }
 
 Config::~Config() {

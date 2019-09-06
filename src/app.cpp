@@ -170,11 +170,7 @@ void App::process_source() {
 void App::process_mkd(fs::path const& src_path) {
 	auto destination = fs::path(config_.destination_dir);
 
-	auto author = config_.cfg.get_value("author", "Unknown");
 	auto base_url = config_.cfg.get_value("base_url", "/");
-	if(base_url.back() != '/') {
-		base_url += '/';
-	}
 
 	std::string md = read_file(src_path.string());
 	
@@ -210,12 +206,7 @@ void App::process_mkd(fs::path const& src_path) {
 		slug = slugify(title);
 	}
 	meta.set("title", title);
-	root->set("title", title);
 
-	if(auto meta_author = meta.get("author"); meta_author) {
-		author = meta_author->value;
-	}
-	
 	auto base = path.parent_path() / slug;
 	auto info = base / "index.html";
 	auto dst = destination / info;
@@ -227,25 +218,10 @@ void App::process_mkd(fs::path const& src_path) {
 	} else if(created->value != src_datetime) {
 		meta.set("updated", src_datetime);
 	}
-	root->set("datetime", src_datetime);
-	root->set("date", src_datetime.substr(0, 10));
-	root->set("url", base_url + info.string());
 
 	if(is_page) {
 		meta.set("type", "page");
 	}
-
-	auto tags = meta.get("tags");
-	if(tags && tags->is_array) {
-		auto block = root->block("tags");
-		for(auto const& tag : tags->values) {
-			auto& t = block->add();
-			t.set("url", base_url + "tag/" + tag);
-			t.set("name", tag);
-		}
-	}
-
-	root->set("content", html);
 
 	auto meta_files = meta.get("files");
 
@@ -269,10 +245,30 @@ void App::process_mkd(fs::path const& src_path) {
 		vs.erase(last, vs.end());
 	}
 
+	auto tags = meta.get("tags");
+	if(tags && tags->is_array) {
+		auto block = root->block("tags");
+		for(auto const& tag : tags->values) {
+			auto& t = block->add();
+			t.set("url", base_url + "tags/" + tag);
+			t.set("name", tag);
+		}
+	}
 
+	config2tmpl(config_.cfg, root);
+	config2tmpl(meta, root);
+	root->set("datetime", src_datetime);
+	root->set("date", src_datetime.substr(0, 10));
+	root->set("url", base_url + info.string());
+	root->set("content", html);
+
+
+	// update .md file
 	write_file(src_path, separator + meta.to_string() + separator + md);
 	fs::last_write_time(src_path, src_mtime);
 
+
+	// create index.html from .md
 	auto md_mtime = create_file(info, tmpl.make(), src_path, dst);
 	if(md_mtime != mtime_t::min()) {
 		auto sql_path = cache_.path_id(base.parent_path());
@@ -346,6 +342,14 @@ void App::process_mkd(fs::path const& src_path) {
 			}
 		}
 	}
+}
+
+void App::config2tmpl(kvc::Config& conf, tmpl::Data::Value* root) {
+	conf.each([root](kvc::KVC const& cfg) {
+		if(!cfg.is_array) {
+			root->set(cfg.key, cfg.value);
+		}
+	});
 }
 
 } // namespace miu

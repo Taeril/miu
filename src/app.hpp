@@ -40,6 +40,8 @@ class App {
 		void process_static();
 		void process_source();
 		void process_mkd(fs::path const& src_path);
+
+		void config2tmpl(kvc::Config& conf, tmpl::Data::Value* root);
 };
 
 } // namespace miu
