@@ -58,7 +58,7 @@ App::~App() {
 
 int App::run() {
 	process_static();
-	process_mkd();
+	process_source();
 
 	return 0;
 }
@@ -152,191 +152,197 @@ void App::process_static() {
 	}
 }
 
-void App::process_mkd() {
-	auto destination = fs::path(config_.destination_dir);
-
+void App::process_source() {
 	for(auto const& p : fs::recursive_directory_iterator(config_.source_dir)) {
 		if(!p.is_regular_file()) {
 			continue;
 		}
-		if(p.path().extension() != ".md") {
+
+		auto path = p.path();
+		if(path.extension() != ".md") {
 			continue;
 		}
 
-		auto author = config_.cfg.get_value("author", "Unknown");
-		auto base_url = config_.cfg.get_value("base_url", "/");
-		if(base_url.back() != '/') {
-			base_url += '/';
+		process_mkd(path);
+	}
+}
+
+void App::process_mkd(fs::path const& src_path) {
+	auto destination = fs::path(config_.destination_dir);
+
+	auto author = config_.cfg.get_value("author", "Unknown");
+	auto base_url = config_.cfg.get_value("base_url", "/");
+	if(base_url.back() != '/') {
+		base_url += '/';
+	}
+
+	std::string md = read_file(src_path.string());
+	
+	std::string const separator("---\n");
+	kvc::Config meta;
+	if(md.rfind(separator, 0) == 0) {
+		auto pos = md.find(separator, separator.size());
+		auto const len = separator.size();
+		if(pos != std::string::npos) {
+			meta.parse(md.substr(len, pos-len));
+			md = md.substr(pos+len);
+		}
+	}
+
+	mkd::Parser parser;
+	std::string html = parser.parse(md);
+
+	auto type = meta.get_value("type", "entry");
+	bool is_page = type == "page";
+	tmpl::Template& tmpl = is_page ? page_tmpl_ : entry_tmpl_;
+
+	auto root = tmpl.data();
+	root->clear();
+
+	auto path = src_path.lexically_relative(config_.source_dir);
+
+	std::string title = meta.get_value("title", parser.title());
+	std::string slug = meta.get_value("slug", parser.slug());
+	if(title.empty()) {
+		title = path.stem();
+	}
+	if(slug.empty()) {
+		slug = slugify(title);
+	}
+	meta.set("title", title);
+	root->set("title", title);
+
+	if(auto meta_author = meta.get("author"); meta_author) {
+		author = meta_author->value;
+	}
+	
+	auto base = path.parent_path() / slug;
+	auto info = base / "index.html";
+	auto dst = destination / info;
+	
+	auto src_mtime = get_mtime(src_path);
+	auto src_datetime = format_mtime(src_mtime);
+	if(auto created = meta.get("created"); !created) {
+		meta.set("created", src_datetime);
+	} else if(created->value != src_datetime) {
+		meta.set("updated", src_datetime);
+	}
+	root->set("datetime", src_datetime);
+	root->set("date", src_datetime.substr(0, 10));
+	root->set("url", base_url + info.string());
+
+	if(is_page) {
+		meta.set("type", "page");
+	}
+
+	auto tags = meta.get("tags");
+	if(tags && tags->is_array) {
+		auto block = root->block("tags");
+		for(auto const& tag : tags->values) {
+			auto& t = block->add();
+			t.set("url", base_url + "tag/" + tag);
+			t.set("name", tag);
+		}
+	}
+
+	root->set("content", html);
+
+	auto meta_files = meta.get("files");
+
+	if(parser.files().size()) {
+		if(!meta_files || (meta_files && !meta_files->is_array)) {
+			// TODO: make less hacky way
+			meta.add("files", "");
+			meta_files = meta.get("files");
+			meta_files->is_array = true;
+		}
+		for(auto const& file : parser.files()) {
+			meta_files->values.push_back(file);
 		}
 
-		std::string md = read_file(p.path().string());
-		
-		std::string const separator("---\n");
-		kvc::Config meta;
-		if(md.rfind(separator, 0) == 0) {
-			auto pos = md.find(separator, separator.size());
-			auto const len = separator.size();
-			if(pos != std::string::npos) {
-				meta.parse(md.substr(len, pos-len));
-				md = md.substr(pos+len);
-			}
-		}
-
-		mkd::Parser parser;
-		std::string html = parser.parse(md);
-
-		auto type = meta.get_value("type", "entry");
-		bool is_page = type == "page";
-		tmpl::Template& tmpl = is_page ? page_tmpl_ : entry_tmpl_;
-
-		auto root = tmpl.data();
-		root->clear();
-
-		auto path = p.path().lexically_relative(config_.source_dir);
-
-		std::string title = meta.get_value("title", parser.title());
-		std::string slug = meta.get_value("slug", parser.slug());
-		if(title.empty()) {
-			title = path.stem();
-		}
-		if(slug.empty()) {
-			slug = slugify(title);
-		}
-		meta.set("title", title);
-		root->set("title", title);
-
-		if(auto meta_author = meta.get("author"); meta_author) {
-			author = meta_author->value;
-		}
-		
-		auto base = path.parent_path() / slug;
-		auto info = base / "index.html";
-		auto dst = destination / info;
-		
-		auto src_mtime = get_mtime(p.path());
-		auto src_datetime = format_mtime(src_mtime);
-		if(auto created = meta.get("created"); !created) {
-			meta.set("created", src_datetime);
-		} else if(created->value != src_datetime) {
-			meta.set("updated", src_datetime);
-		}
-		root->set("datetime", src_datetime);
-		root->set("date", src_datetime.substr(0, 10));
-		root->set("url", base_url + info.string());
-
-		if(is_page) {
-			meta.set("type", "page");
-		}
-
-		auto tags = meta.get("tags");
-		if(tags && tags->is_array) {
-			auto block = root->block("tags");
-			for(auto const& tag : tags->values) {
-				auto& t = block->add();
-				t.set("url", base_url + "tag/" + tag);
-				t.set("name", tag);
-			}
-		}
-
-		root->set("content", html);
-
-		auto meta_files = meta.get("files");
-
-		if(parser.files().size()) {
-			if(!meta_files || (meta_files && !meta_files->is_array)) {
-				// TODO: make less hacky way
-				meta.add("files", "");
-				meta_files = meta.get("files");
-				meta_files->is_array = true;
-			}
-			for(auto const& file : parser.files()) {
-				meta_files->values.push_back(file);
-			}
-
-			auto& vs = meta_files->values;
-			//for(auto& v : vs) {
-			//	// TODO: normalize values, make path relative to .md file
-			//}
-			std::sort(vs.begin(), vs.end());
-			auto last = std::unique(vs.begin(), vs.end());
-			vs.erase(last, vs.end());
-		}
+		auto& vs = meta_files->values;
+		//for(auto& v : vs) {
+		//	// TODO: normalize values, make path relative to .md file
+		//}
+		std::sort(vs.begin(), vs.end());
+		auto last = std::unique(vs.begin(), vs.end());
+		vs.erase(last, vs.end());
+	}
 
 
-		write_file(p.path(), separator + meta.to_string() + separator + md);
-		fs::last_write_time(p.path(), src_mtime);
+	write_file(src_path, separator + meta.to_string() + separator + md);
+	fs::last_write_time(src_path, src_mtime);
 
-		auto md_mtime = create_file(info, tmpl.make(), p.path(), dst);
-		if(md_mtime != mtime_t::min()) {
-			auto sql_path = cache_.path_id(base.parent_path());
-			Entry entry;
-			entry.type = is_page ? Type::Page : Type::Entry;
-			entry.source = path;
-			entry.path = sql_path;
-			entry.slug = slug;
-			entry.file = "index.html";
-			entry.title = title;
-			entry.datetime = format_mtime(md_mtime);
-			entry.update = false;
+	auto md_mtime = create_file(info, tmpl.make(), src_path, dst);
+	if(md_mtime != mtime_t::min()) {
+		auto sql_path = cache_.path_id(base.parent_path());
+		Entry entry;
+		entry.type = is_page ? Type::Page : Type::Entry;
+		entry.source = path;
+		entry.path = sql_path;
+		entry.slug = slug;
+		entry.file = "index.html";
+		entry.title = title;
+		entry.datetime = format_mtime(md_mtime);
+		entry.update = false;
 
-			auto entry_id = cache_.add_entry(entry);
+		auto entry_id = cache_.add_entry(entry);
 
-			if(!is_page) {
-				paths_.insert(sql_path);
-				if(tags && tags->is_array) {
-					for(auto const& tag : tags->values) {
-						cache_.add_tag(entry_id, tag);
-						tags_.insert(tag);
-					}
+		if(!is_page) {
+			paths_.insert(sql_path);
+			if(tags && tags->is_array) {
+				for(auto const& tag : tags->values) {
+					cache_.add_tag(entry_id, tag);
+					tags_.insert(tag);
 				}
 			}
 		}
+	}
 
-		for(auto const& code : parser.codes()) {
-			auto [file, data] = code;
+	for(auto const& code : parser.codes()) {
+		auto [file, data] = code;
+		auto finfo = base / file;
+		auto fpath = destination / finfo;
+
+		auto code_mtime = create_file(finfo, data, src_path, fpath);
+		if(code_mtime != mtime_t::min()) {
+			auto sql_path = cache_.path_id(base.parent_path());
+			Entry entry;
+			entry.type = Type::Source;
+			entry.source = path;
+			entry.path = sql_path;
+			entry.slug = slug;
+			entry.file = file;
+			entry.title = {};
+			entry.datetime = format_mtime(code_mtime);
+			entry.update = false;
+
+			cache_.add_entry(entry);
+		}
+	}
+
+
+	if(meta_files && meta_files->values.size()) {
+		auto src_dir = src_path.parent_path();
+		for(auto const& file : meta_files->values) {
+			auto src_file = src_dir / file;
 			auto finfo = base / file;
-			auto fpath = destination / finfo;
+			auto dst_file = destination / finfo;
 
-			auto code_mtime = create_file(finfo, data, p.path(), fpath);
-			if(code_mtime != mtime_t::min()) {
+			auto file_mtime = update_file(finfo, src_file, dst_file);
+			if(file_mtime != mtime_t::min()) {
 				auto sql_path = cache_.path_id(base.parent_path());
 				Entry entry;
-				entry.type = Type::Source;
-				entry.source = path;
+				entry.type = Type::File;
+				entry.source = src_file.lexically_relative(config_.source_dir);
 				entry.path = sql_path;
 				entry.slug = slug;
 				entry.file = file;
 				entry.title = {};
-				entry.datetime = format_mtime(code_mtime);
+				entry.datetime = format_mtime(file_mtime);
 				entry.update = false;
 
 				cache_.add_entry(entry);
-			}
-		}
-
-
-		if(meta_files && meta_files->values.size()) {
-			auto src_dir = p.path().parent_path();
-			for(auto const& file : meta_files->values) {
-				auto src_file = src_dir / file;
-				auto finfo = base / file;
-				auto dst_file = destination / finfo;
-
-				auto file_mtime = update_file(finfo, src_file, dst_file);
-				if(file_mtime != mtime_t::min()) {
-					auto sql_path = cache_.path_id(base.parent_path());
-					Entry entry;
-					entry.type = Type::File;
-					entry.source = src_file.lexically_relative(config_.source_dir);
-					entry.path = sql_path;
-					entry.slug = slug;
-					entry.file = file;
-					entry.title = {};
-					entry.datetime = format_mtime(file_mtime);
-					entry.update = false;
-
-					cache_.add_entry(entry);
-				}
 			}
 		}
 	}

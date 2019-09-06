@@ -38,7 +38,8 @@ class App {
 			fs::path const& src, fs::path const& dst);
 
 		void process_static();
-		void process_mkd();
+		void process_source();
+		void process_mkd(fs::path const& src_path);
 };
 
 } // namespace miu
