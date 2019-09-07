@@ -498,54 +498,145 @@ void App::process_tags() {
 }
 
 void App::process_index() {
-	enum { PATH, SLUG, FILE_, TITLE, DATETIME };
+	enum { PATH, SLUG, FILE_, TITLE, DATETIME, SOURCE };
 
 	if(paths_.empty()) {
 		return;
 	}
 
-	auto root = list_tmpl_.data();
+	auto root = index_tmpl_.data();
+	auto feed = feed_tmpl_.data();
 
 	auto destination = fs::path(config_.destination_dir);
 	auto base_url = config_.cfg.get_value("base_url", "/");
+	auto feed_base_url = config_.cfg.get_value("feed_base_url", base_url);
+	if(feed_base_url.back() != '/') {
+		feed_base_url += '/';
+	}
+	auto title = config_.cfg.get_value("title",
+		config_.cfg.get_value("home_name", "/")
+	);
 
 	root->clear();
 	config2tmpl(config_.cfg, root);
-	root->set("title", config_.cfg.get_value("title",
-		config_.cfg.get_value("home_name", "/")
-	));
+	root->set("title", title);
 
+	feed->clear();
+	config2tmpl(config_.cfg, feed);
+	feed->set("title", title);
+	bool is_first = true;
+	feed->set("feed_url", feed_base_url + "feed.xml");
+	feed->set("index_url", feed_base_url);
+	feed->set("id", feed_base_url);
 
-	auto num_entries = config_.cfg.get_value("num_entries", "5");
-	int count = std::stoi(num_entries);
+	int num_entries = std::stoi(config_.cfg.get_value("num_entries", "5"));
+	int short_size = std::stoi(config_.cfg.get_value("short_size", "400"));
 
 	auto block_entries = root->block("entries");
-	cache_.last_entries(count, [&](QueryResult entry) {
+	auto feed_entries = feed->block("entries");
+	cache_.last_entries(num_entries, [&](QueryResult entry) {
+		if(is_first) {
+			feed->set("updated", entry[DATETIME]);
+			is_first = false;
+		}
+
+		auto src_path = fs::path(config_.source_dir) / entry[SOURCE];
+		std::string md = read_file(src_path.string());
+
+		std::string const separator("---\n");
+		kvc::Config meta;
+		if(md.rfind(separator, 0) == 0) {
+			auto pos = md.find(separator, separator.size());
+			auto const len = separator.size();
+			if(pos != std::string::npos) {
+				meta.parse(md.substr(len, pos-len));
+				md = md.substr(pos+len);
+			}
+		}
+
+		mkd::Parser parser;
+		std::string html = parser.parse(md);
+
+		auto pos = md.find_first_of("\r\n", short_size);
+		if(pos != std::string::npos && (md[pos+1] == '\r' || md[pos+1] == '\n')) {
+			md = md.substr(0, pos);
+		}
+		pos = md.find("\n```");
+		if(pos != std::string::npos) {
+			md = md.substr(0, pos);
+		}
+		pos = md.find("\n    ");
+		if(pos != std::string::npos) {
+			md = md.substr(0, pos);
+		}
+		std::string short_html = parser.parse(md);
+
 		auto& e = block_entries->add();
+		config2tmpl(meta, &e);
 		e.set("datetime", entry[DATETIME]);
 		e.set("date", entry[DATETIME].substr(0, 10));
 		e.set("title", entry[TITLE]);
 		std::string path_slash = entry[PATH].empty() ? "" : entry[PATH] + "/";
 		e.set("url", base_url + path_slash + entry[SLUG] + "/");
+		e.set("content", short_html);
+
+		auto tags = meta.get("tags");
+		if(tags && tags->is_array) {
+			auto block = e.block("tags");
+			for(auto const& tag : tags->values) {
+				auto& t = block->add();
+				t.set("url", base_url + "tags/" + tag + "/");
+				t.set("name", tag);
+			}
+		}
+
+		auto& fe = feed_entries->add();
+		fe.set("title", entry[TITLE]);
+		fe.set("url", feed_base_url + path_slash + entry[SLUG] + "/");
+		fe.set("datetime", entry[DATETIME]);
+		fe.set("content", short_html);
+		fe.set("id", feed_base_url + path_slash + entry[SLUG] + "/");
 	});
 
-	fmt::print("CREATE: index.html\n");
-	auto dst = destination;
-	fs::create_directories(dst);
-	write_file(dst / "index.html", list_tmpl_.make());
+	{
+		fmt::print("CREATE: index.html\n");
+		auto dst = destination;
+		fs::create_directories(dst);
+		write_file(dst / "index.html", index_tmpl_.make());
 
-	auto sql_path = cache_.path_id("");
-	Entry entry;
-	entry.type = Type::List;
-	entry.source = "";
-	entry.path = sql_path;
-	entry.slug = {};
-	entry.file = "index.html";
-	entry.title = {};
-	entry.datetime = config_.cfg.get_value("now", "now");
-	entry.update = false;
+		auto sql_path = cache_.path_id("");
+		Entry entry;
+		entry.type = Type::Index;
+		entry.source = "";
+		entry.path = sql_path;
+		entry.slug = {};
+		entry.file = "index.html";
+		entry.title = {};
+		entry.datetime = config_.cfg.get_value("now", "now");
+		entry.update = false;
 
-	cache_.add_entry(entry);
+		cache_.add_entry(entry);
+	}
+
+	{
+		fmt::print("CREATE: feed.xml\n");
+		auto dst = destination;
+		fs::create_directories(dst);
+		write_file(dst / "feed.xml", feed_tmpl_.make());
+
+		auto sql_path = cache_.path_id("");
+		Entry entry;
+		entry.type = Type::Feed;
+		entry.source = "";
+		entry.path = sql_path;
+		entry.slug = {};
+		entry.file = "feed.xml";
+		entry.title = {};
+		entry.datetime = config_.cfg.get_value("now", "now");
+		entry.update = false;
+
+		cache_.add_entry(entry);
+	}
 }
 
 

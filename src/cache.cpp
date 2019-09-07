@@ -322,7 +322,7 @@ void Cache::list_things(sqlite3_stmt* stmt, int count, QueryCallback cb) {
 
 void Cache::last_entries(int count, QueryCallback cb) {
 	const char sql_select[] = R"~(
-		SELECT name as path, slug, file, title, created
+		SELECT name as path, slug, file, title, created, source
 		FROM entries, paths
 		WHERE type = ? AND paths.id = entries.path
 		ORDER BY created DESC
@@ -337,7 +337,7 @@ void Cache::last_entries(int count, QueryCallback cb) {
 	bind_or_exit(stmt, 1, static_cast<int>(Type::Entry), "last_entries(bind type)");
 	bind_or_exit(stmt, 2, count, "last_entries(bind limit)");
 
-	list_things(stmt, 5, cb);
+	list_things(stmt, 6, cb);
 }
 
 void Cache::list_subpaths(sqlite3_int64 path, QueryCallback cb) {
