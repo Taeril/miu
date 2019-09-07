@@ -14,6 +14,9 @@ enum class Type {
 	Entry,
 	Source,
 	File,
+	List,
+	Index,
+	Feed,
 };
 
 struct Entry {

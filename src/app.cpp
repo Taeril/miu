@@ -145,7 +145,7 @@ void App::process_static() {
 			entry.source = path;
 			entry.path = sql_path;
 			entry.slug = {};
-			entry.file = path.string();
+			entry.file = path.filename();
 			entry.title = {};
 			entry.datetime = format_mtime(mtime);
 			entry.update = false;
@@ -369,6 +369,11 @@ void App::process_paths() {
 	auto base_url = config_.cfg.get_value("base_url", "/");
 
 	for(auto const& path : paths_) {
+		// skip / as there is index.html from process_index
+		if(path.empty()) {
+			continue;
+		}
+
 		root->clear();
 		config2tmpl(config_.cfg, root);
 		root->set("title", path);
@@ -396,6 +401,19 @@ void App::process_paths() {
 		auto dst = destination / path;
 		fs::create_directories(dst);
 		write_file(dst / "index.html", list_tmpl_.make());
+		
+		auto sql_path = cache_.path_id(path);
+		Entry entry;
+		entry.type = Type::List;
+		entry.source = "";
+		entry.path = sql_path;
+		entry.slug = {};
+		entry.file = "index.html";
+		entry.title = {};
+		entry.datetime = config_.cfg.get_value("now", "now");
+		entry.update = false;
+
+		cache_.add_entry(entry);
 	}
 }
 
@@ -428,6 +446,19 @@ void App::process_tags() {
 	fs::create_directories(dst);
 	write_file(dst / "index.html", list_tmpl_.make());
 
+	auto sql_path = cache_.path_id("tags");
+	Entry entry;
+	entry.type = Type::List;
+	entry.source = "";
+	entry.path = sql_path;
+	entry.slug = {};
+	entry.file = "index.html";
+	entry.title = {};
+	entry.datetime = config_.cfg.get_value("now", "now");
+	entry.update = false;
+
+	cache_.add_entry(entry);
+
 	for(auto const& tag : tags_) {
 		root->clear();
 		config2tmpl(config_.cfg, root);
@@ -449,6 +480,20 @@ void App::process_tags() {
 		auto dst = destination / "tags" / tag;
 		fs::create_directories(dst);
 		write_file(dst / "index.html", list_tmpl_.make());
+		
+
+		auto sql_path = cache_.path_id(fmt::format("tags/{}", tag));
+		Entry entry;
+		entry.type = Type::List;
+		entry.source = "";
+		entry.path = sql_path;
+		entry.slug = {};
+		entry.file = "index.html";
+		entry.title = {};
+		entry.datetime = config_.cfg.get_value("now", "now");
+		entry.update = false;
+
+		cache_.add_entry(entry);
 	}
 }
 
@@ -488,6 +533,19 @@ void App::process_index() {
 	auto dst = destination;
 	fs::create_directories(dst);
 	write_file(dst / "index.html", list_tmpl_.make());
+
+	auto sql_path = cache_.path_id("");
+	Entry entry;
+	entry.type = Type::List;
+	entry.source = "";
+	entry.path = sql_path;
+	entry.slug = {};
+	entry.file = "index.html";
+	entry.title = {};
+	entry.datetime = config_.cfg.get_value("now", "now");
+	entry.update = false;
+
+	cache_.add_entry(entry);
 }
 
 

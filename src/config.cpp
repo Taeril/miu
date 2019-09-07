@@ -7,6 +7,7 @@
 #include "filesystem.hpp"
 
 #include <fmt/core.h>
+#include <fmt/time.h>
 //#include <fmt/ostream.h>
 
 // https://github.com/adishavit/argh
@@ -189,6 +190,9 @@ Config::Config(int argc, char** argv) {
 
 	cfg.set("home_url", base_url);
 	cfg.set("tags_url", base_url + "tags/");
+
+	time_t ctime = time(nullptr);
+	cfg.set("now", fmt::format("{:%Y-%m-%dT%H:%M:%SZ}", *gmtime(&ctime)));
 }
 
 Config::~Config() {
