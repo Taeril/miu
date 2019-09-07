@@ -30,7 +30,7 @@ Available options:
   -t, --tmpl, --template     <path>   - directory with templates (default: ./template)
   -R, --rebuild                       - ignore cache and recreate everything
   -v, --verbose                       - verbose output (levels: 0-2)
-                                        (use multiple times to increase level) 
+                                        (use multiple times to increase level)
   -V, --version                       - display version
   -h, -?, --help                      - show this help and exit
 )~";
@@ -45,9 +45,9 @@ Config::Config(int argc, char** argv) {
 		"f", "files", "static",
 		"t", "tmpl", "template",
 	});
-	
+
 	args.parse(argc, argv, 0
-		//| argh::parser::PREFER_PARAM_FOR_UNREG_OPTION 
+		//| argh::parser::PREFER_PARAM_FOR_UNREG_OPTION
 		| argh::parser::SINGLE_DASH_IS_MULTIFLAG
 	);
 
@@ -73,7 +73,7 @@ Config::Config(int argc, char** argv) {
 		fmt::print("miu v{}\n", VERSION);
 		std::exit(0);
 	}
-	
+
 	rebuild = args[{"rebuild", "R"}];
 
 	for(size_t i=1; i<args.size(); ++i) {
@@ -110,7 +110,7 @@ Config::Config(int argc, char** argv) {
 	auto root_path = cwd.root_path();
 
 	std::optional<std::string> miu_conf;
-	if(bool(conf)) { 
+	if(bool(conf)) {
 		miu_conf = conf.str();
 	}
 
@@ -188,7 +188,7 @@ Config::Config(int argc, char** argv) {
 	cfg.add_new("tags_name", "Tags");
 
 	cfg.set("home_url", base_url);
-	cfg.set("tags_url", base_url + "tags");
+	cfg.set("tags_url", base_url + "tags/");
 }
 
 Config::~Config() {

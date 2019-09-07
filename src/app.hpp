@@ -29,7 +29,7 @@ class App {
 		tmpl::Template page_tmpl_;
 		tmpl::Template entry_tmpl_;
 		tmpl::Template feed_tmpl_;
-		std::unordered_set<sqlite3_int64> paths_;
+		std::unordered_set<std::string> paths_;
 		std::unordered_set<std::string> tags_;
 
 		mtime_t update_file(std::string const& info,
@@ -40,6 +40,9 @@ class App {
 		void process_static();
 		void process_source();
 		void process_mkd(fs::path const& src_path);
+		void process_paths();
+		void process_tags();
+		void process_index();
 
 		void config2tmpl(kvc::Config& conf, tmpl::Data::Value* root);
 };

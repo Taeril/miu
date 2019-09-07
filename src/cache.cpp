@@ -301,3 +301,124 @@ void Cache::add_tag(sqlite3_int64 entry, std::string const& tag) {
 	}
 }
 
+void Cache::list_things(sqlite3_stmt* stmt, int count, QueryCallback cb) {
+	while(1) {
+		int rc = sqlite3_step(stmt);
+		if(rc == SQLITE_ROW) {
+			std::vector<std::string> result;
+			for(int i=0; i<count; ++i) {
+				result.emplace_back((char*)sqlite3_column_text(stmt, i));
+			}
+			cb(result);
+		} else if(rc == SQLITE_DONE) {
+			break;
+		} else {
+			sqlite3_finalize(stmt);
+			err_exit("list_tags(step)", rc);
+		}
+	}
+	sqlite3_finalize(stmt);
+}
+
+void Cache::last_entries(int count, QueryCallback cb) {
+	const char sql_select[] = R"~(
+		SELECT name as path, slug, file, title, created
+		FROM entries, paths
+		WHERE type = ? AND paths.id = entries.path
+		ORDER BY created DESC
+		LIMIT ?
+	)~";
+	constexpr const int sql_select_len = length(sql_select);
+
+	sqlite3_stmt* stmt = nullptr;
+	prepare_or_exit(sql_select, sql_select_len, &stmt, nullptr,
+		"last_entries(prepare select)");
+
+	bind_or_exit(stmt, 1, static_cast<int>(Type::Entry), "last_entries(bind type)");
+	bind_or_exit(stmt, 2, count, "last_entries(bind limit)");
+
+	list_things(stmt, 5, cb);
+}
+
+void Cache::list_subpaths(sqlite3_int64 path, QueryCallback cb) {
+	const char sql_select[] = R"~(
+		SELECT
+			name,
+			substr(name, length(namestart)+1) AS subname
+		FROM
+			paths,
+			(SELECT name || '/' AS namestart FROM paths WHERE id = ?)
+		WHERE
+			substr(name, 0, length(namestart)+1) == namestart
+		ORDER BY name DESC
+	)~";
+	constexpr const int sql_select_len = length(sql_select);
+
+	sqlite3_stmt* stmt = nullptr;
+	prepare_or_exit(sql_select, sql_select_len, &stmt, nullptr,
+		"list_things(prepare select)");
+
+	bind_or_exit(stmt, 1, path, "list_subpaths(bind path)");
+
+	list_things(stmt, 2, cb);
+}
+
+void Cache::list_entries_path(sqlite3_int64 path, QueryCallback cb) {
+	const char sql_select[] = R"~(
+		SELECT
+			name as path, slug, file, title, created
+		FROM
+			entries, paths
+		WHERE
+			type = ? AND paths.id = entries.path AND
+			paths.id = ?
+		ORDER BY created DESC
+	)~";
+	constexpr const int sql_select_len = length(sql_select);
+
+	sqlite3_stmt* stmt = nullptr;
+	prepare_or_exit(sql_select, sql_select_len, &stmt, nullptr,
+		"list_entries_path(prepare select)");
+
+	bind_or_exit(stmt, 1, static_cast<int>(Type::Entry), "list_entries_path(bind type)");
+	bind_or_exit(stmt, 2, path, "list_entries_path(bind path)");
+
+	list_things(stmt, 5, cb);
+}
+
+void Cache::list_entries_tag(sqlite3_int64 tag, QueryCallback cb) {
+	const char sql_select[] = R"~(
+		SELECT
+			name as path, slug, file, title, created
+		FROM
+			entries, paths, tagged_entries
+		WHERE
+			type = ? AND paths.id = entries.path AND
+			tag = ? AND entry = entries.id
+		ORDER BY created DESC
+	)~";
+	constexpr const int sql_select_len = length(sql_select);
+
+	sqlite3_stmt* stmt = nullptr;
+	prepare_or_exit(sql_select, sql_select_len, &stmt, nullptr,
+		"list_entries_tag(prepare select)");
+
+	bind_or_exit(stmt, 1, static_cast<int>(Type::Entry), "list_entries_tag(bind type)");
+	bind_or_exit(stmt, 2, tag, "list_entries_tag(bind tag)");
+
+	list_things(stmt, 5, cb);
+}
+
+void Cache::list_tags(QueryCallback cb) {
+	const char sql_select[] = R"~(
+		SELECT name FROM tags ORDER BY name ASC
+	)~";
+	constexpr const int sql_select_len = length(sql_select);
+
+	sqlite3_stmt* stmt = nullptr;
+	prepare_or_exit(sql_select, sql_select_len, &stmt, nullptr,
+		"list_things(prepare select)");
+
+	list_things(stmt, 1, cb);
+}
+

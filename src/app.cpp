@@ -59,6 +59,9 @@ App::~App() {
 int App::run() {
 	process_static();
 	process_source();
+	process_paths();
+	process_tags();
+	process_index();
 
 	return 0;
 }
@@ -173,7 +176,7 @@ void App::process_mkd(fs::path const& src_path) {
 	auto base_url = config_.cfg.get_value("base_url", "/");
 
 	std::string md = read_file(src_path.string());
-	
+
 	std::string const separator("---\n");
 	kvc::Config meta;
 	if(md.rfind(separator, 0) == 0) {
@@ -210,7 +213,7 @@ void App::process_mkd(fs::path const& src_path) {
 	auto base = path.parent_path() / slug;
 	auto info = base / "index.html";
 	auto dst = destination / info;
-	
+
 	auto src_mtime = get_mtime(src_path);
 	auto src_datetime = format_mtime(src_mtime);
 	if(auto created = meta.get("created"); !created) {
@@ -250,7 +253,7 @@ void App::process_mkd(fs::path const& src_path) {
 		auto block = root->block("tags");
 		for(auto const& tag : tags->values) {
 			auto& t = block->add();
-			t.set("url", base_url + "tags/" + tag);
+			t.set("url", base_url + "tags/" + tag + "/");
 			t.set("name", tag);
 		}
 	}
@@ -259,7 +262,7 @@ void App::process_mkd(fs::path const& src_path) {
 	config2tmpl(meta, root);
 	root->set("datetime", src_datetime);
 	root->set("date", src_datetime.substr(0, 10));
-	root->set("url", base_url + info.string());
+	root->set("url", base_url + base.string() + "/");
 	root->set("content", html);
 
 
@@ -285,7 +288,7 @@ void App::process_mkd(fs::path const& src_path) {
 		auto entry_id = cache_.add_entry(entry);
 
 		if(!is_page) {
-			paths_.insert(sql_path);
+			paths_.insert(base.parent_path());
 			if(tags && tags->is_array) {
 				for(auto const& tag : tags->values) {
 					cache_.add_tag(entry_id, tag);
@@ -351,6 +354,142 @@ void App::config2tmpl(kvc::Config& conf, tmpl::Data::Value* root) {
 		}
 	});
 }
+
+void App::process_paths() {
+	enum { PATH, NAME };
+	enum { PATH_, SLUG, FILE_, TITLE, DATETIME };
+
+	if(paths_.empty()) {
+		return;
+	}
+
+	auto root = list_tmpl_.data();
+
+	auto destination = fs::path(config_.destination_dir);
+	auto base_url = config_.cfg.get_value("base_url", "/");
+
+	for(auto const& path : paths_) {
+		root->clear();
+		config2tmpl(config_.cfg, root);
+		root->set("title", path);
+
+		auto path_id = cache_.path_id(path);
+
+		auto block_list = root->block("list");
+		cache_.list_subpaths(path_id, [&](QueryResult paths) {
+			auto& p = block_list->add();
+			p.set("url", base_url + paths[PATH] + "/");
+			p.set("name", paths[NAME]);
+		});
+
+		auto block_entries = root->block("entries");
+		cache_.list_entries_path(path_id, [&](QueryResult entry) {
+			auto& e = block_entries->add();
+			e.set("datetime", entry[DATETIME]);
+			e.set("date", entry[DATETIME].substr(0, 10));
+			e.set("title", entry[TITLE]);
+			std::string path_slash = entry[PATH].empty() ? "" : entry[PATH] + "/";
+			e.set("url", base_url + path_slash + entry[SLUG] + "/");
+		});
+
+		fmt::print("CREATE: {}/index.html\n", path);
+		auto dst = destination / path;
+		fs::create_directories(dst);
+		write_file(dst / "index.html", list_tmpl_.make());
+	}
+}
+
+void App::process_tags() {
+	enum { NAME };
+	enum { PATH, SLUG, FILE_, TITLE, DATETIME };
+
+	if(tags_.empty()) {
+		return;
+	}
+
+	auto root = list_tmpl_.data();
+
+	auto destination = fs::path(config_.destination_dir);
+	auto base_url = config_.cfg.get_value("base_url", "/");
+
+	root->clear();
+	config2tmpl(config_.cfg, root);
+	root->set("title", config_.cfg.get("tags_name")->value);
+
+	auto block_list = root->block("list");
+	cache_.list_tags([&](QueryResult tag) {
+		auto& p = block_list->add();
+		p.set("url", base_url + "tags/" + tag[NAME] + "/");
+		p.set("name", tag[NAME]);
+	});
+
+	fmt::print("CREATE: tags/index.html\n");
+	auto dst = destination / "tags";
+	fs::create_directories(dst);
+	write_file(dst / "index.html", list_tmpl_.make());
+
+	for(auto const& tag : tags_) {
+		root->clear();
+		config2tmpl(config_.cfg, root);
+		root->set("title", config_.cfg.get("tags_name")->value + ": " + tag);
+
+		auto tag_id = cache_.tag_id(tag);
+
+		auto block_entries = root->block("entries");
+		cache_.list_entries_tag(tag_id, [&](QueryResult entry) {
+			auto& e = block_entries->add();
+			e.set("datetime", entry[DATETIME]);
+			e.set("date", entry[DATETIME].substr(0, 10));
+			e.set("title", entry[TITLE]);
+			std::string path_slash = entry[PATH].empty() ? "" : entry[PATH] + "/";
+			e.set("url", base_url + path_slash + entry[SLUG] + "/");
+		});
+
+		fmt::print("CREATE: tags/{}/index.html\n", tag);
+		auto dst = destination / "tags" / tag;
+		fs::create_directories(dst);
+		write_file(dst / "index.html", list_tmpl_.make());
+	}
+}
+
+void App::process_index() {
+	enum { PATH, SLUG, FILE_, TITLE, DATETIME };
+
+	if(paths_.empty()) {
+		return;
+	}
+
+	auto root = list_tmpl_.data();
+
+	auto destination = fs::path(config_.destination_dir);
+	auto base_url = config_.cfg.get_value("base_url", "/");
+
+	root->clear();
+	config2tmpl(config_.cfg, root);
+	root->set("title", config_.cfg.get_value("title",
+		config_.cfg.get_value("home_name", "/")
+	));
+
+
+	auto num_entries = config_.cfg.get_value("num_entries", "5");
+	int count = std::stoi(num_entries);
+
+	auto block_entries = root->block("entries");
+	cache_.last_entries(count, [&](QueryResult entry) {
+		auto& e = block_entries->add();
+		e.set("datetime", entry[DATETIME]);
+		e.set("date", entry[DATETIME].substr(0, 10));
+		e.set("title", entry[TITLE]);
+		std::string path_slash = entry[PATH].empty() ? "" : entry[PATH] + "/";
+		e.set("url", base_url + path_slash + entry[SLUG] + "/");
+	});
+
+	fmt::print("CREATE: index.html\n");
+	auto dst = destination;
+	fs::create_directories(dst);
+	write_file(dst / "index.html", list_tmpl_.make());
+}
+
 
 } // namespace miu
 
