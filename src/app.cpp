@@ -13,6 +13,9 @@
 #include <kvc/kvc.hpp>
 #include <mkd/mkd.hpp>
 
+#define LOG_INFO(...) do { if(config_.verbose > 0) fmt::print(__VA_ARGS__); } while(0)
+#define LOG_TRACE(...) do { if(config_.verbose > 1) fmt::print(__VA_ARGS__); } while(0)
+#define LOG_ERROR(...) do { fmt::print(stderr, __VA_ARGS__); } while(0)
 
 // formatter for fs::path
 // because using fmt/ostream.h would surround path with quotes
@@ -74,13 +77,13 @@ int App::run() {
 			//path = fs::canonical(path);
 			path = path.lexically_normal();
 
-			fmt::print("FILE: {}\n", path);
+			LOG_TRACE("FILE: {}\n", path);
 
 			auto src_path = fs::path(config_.source_dir);
 			auto rel_path = path.lexically_relative(src_path);
 
 			if(path != src_path / rel_path) {
-				fmt::print("ERROR: file '{}' is outside source directory '{}'\n",
+				LOG_ERROR("ERROR: file '{}' is outside source directory '{}'\n",
 					path, src_path);
 				std::exit(1);
 			}
@@ -119,12 +122,12 @@ mtime_t App::update_file(std::string const& info,
 		auto dst_mtime = get_mtime(dst);
 
 		if(src_mtime > dst_mtime) {
-			fmt::print("UPDATE: {}\n", info);
+			LOG_INFO("UPDATE: {}\n", info);
 		} else {
 			return mtime_t::min();
 		}
 	} else {
-		fmt::print("COPY: {}\n", info);
+		LOG_INFO("COPY: {}\n", info);
 	}
 
 	fs::create_directories(dst.parent_path());
@@ -142,12 +145,12 @@ mtime_t App::create_file(std::string const& info, std::string const& data,
 		auto dst_mtime = get_mtime(dst);
 
 		if(src_mtime > dst_mtime) {
-			fmt::print("UPDATE: {}\n", info);
+			LOG_INFO("UPDATE: {}\n", info);
 		} else {
 			return mtime_t::min();
 		}
 	} else {
-		fmt::print("CREATE: {}\n", info);
+		LOG_INFO("CREATE: {}\n", info);
 	}
 
 	fs::create_directories(dst.parent_path());
@@ -427,7 +430,7 @@ void App::process_paths() {
 			e.set("url", base_url + path_slash + entry[SLUG] + "/");
 		});
 
-		fmt::print("CREATE: {}/index.html\n", path);
+		LOG_INFO("CREATE: {}/index.html\n", path);
 		auto dst = destination / path;
 		fs::create_directories(dst);
 		write_file(dst / "index.html", list_tmpl_.make());
@@ -471,7 +474,7 @@ void App::process_tags() {
 		p.set("name", tag[NAME]);
 	});
 
-	fmt::print("CREATE: tags/index.html\n");
+	LOG_INFO("CREATE: tags/index.html\n");
 	auto dst = destination / "tags";
 	fs::create_directories(dst);
 	write_file(dst / "index.html", list_tmpl_.make());
@@ -506,7 +509,7 @@ void App::process_tags() {
 			e.set("url", base_url + path_slash + entry[SLUG] + "/");
 		});
 
-		fmt::print("CREATE: tags/{}/index.html\n", tag);
+		LOG_INFO("CREATE: tags/{}/index.html\n", tag);
 		auto dst = destination / "tags" / tag;
 		fs::create_directories(dst);
 		write_file(dst / "index.html", list_tmpl_.make());
@@ -629,7 +632,7 @@ void App::process_index() {
 	});
 
 	{
-		fmt::print("CREATE: index.html\n");
+		LOG_INFO("CREATE: index.html\n");
 		auto dst = destination;
 		fs::create_directories(dst);
 		write_file(dst / "index.html", index_tmpl_.make());
@@ -649,7 +652,7 @@ void App::process_index() {
 	}
 
 	{
-		fmt::print("CREATE: feed.xml\n");
+		LOG_INFO("CREATE: feed.xml\n");
 		auto dst = destination;
 		fs::create_directories(dst);
 		write_file(dst / "feed.xml", feed_tmpl_.make());
