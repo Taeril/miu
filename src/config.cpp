@@ -81,31 +81,6 @@ Config::Config(int argc, char** argv) {
 		files.push_back(args(i).str());
 	}
 
-#if 0
-	fmt::print("conf: [{}] {}\n", bool(conf), conf.str());
-	fmt::print("root: [{}] {}\n", bool(root), root.str());
-	fmt::print("cache: [{}] {}\n", bool(cache), cache.str());
-	fmt::print("src: [{}] {}\n", bool(src), src.str());
-	fmt::print("dest: [{}] {}\n", bool(dest), dest.str());
-	fmt::print("static: [{}] {}\n", bool(static_files), static_files.str());
-	fmt::print("tmpl: [{}] {}\n", bool(tmpl), tmpl.str());
-#endif
-
-#if 0
-	fmt::print("Positional args:\n");
-	size_t n = 0;
-	for(auto& pos_arg : args.pos_args())
-		fmt::print("{}. {}\n", n++, pos_arg);
-
-	fmt::print("\nFlags:\n");
-	for(auto& flag : args.flags())
-		fmt::print(" -{}\n", flag);
-
-	fmt::print("\nParameters:\n");
-	for(auto& param : args.params())
-		fmt::print("  {}: {}\n", param.first, param.second);
-#endif
-
 
 	auto cwd = fs::current_path();
 	auto root_path = cwd.root_path();
@@ -159,24 +134,6 @@ Config::Config(int argc, char** argv) {
 	cfg.add("static", static_dir);
 	cfg.add("template", template_dir);
 
-#if 0
-	fmt::print("verbose: {}\n", verbose);
-	fmt::print("rebuild: {}\n", rebuild);
-	fmt::print("conf: [{}] {}\n", bool(miu_conf), miu_conf ? *miu_conf : "");
-	fmt::print("root: {}\n", root_dir);
-	fmt::print("cache: {}\n", cache_db);
-	fmt::print("source: {}\n", source_dir);
-	fmt::print("destination: {}\n", destination_dir);
-	fmt::print("static: {}\n", static_dir);
-	fmt::print("template: {}\n", template_dir);
-
-	fmt::print("files({}):\n", files.size());
-	for(auto const& file : files) {
-		fmt::print(" - {}\n", file);
-	}
-
-	fmt::print("cfg:\n{}\n", cfg.to_string());
-#endif
 
 	auto base_url = cfg.get_value("base_url", "/");
 	if(base_url.back() != '/') {
