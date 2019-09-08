@@ -58,7 +58,37 @@ App::~App() {
 
 int App::run() {
 	process_static();
-	process_source();
+
+	if(config_.rebuild || config_.files.empty()) {
+		process_source();
+	}
+	if(!config_.files.empty()) {
+		for(auto const& file : config_.files) {
+			auto path = fs::path(file);
+			if(!fs::exists(path) || !fs::is_regular_file(path)) {
+				continue;
+			}
+			if(path.is_relative()) {
+				path = fs::absolute(path);
+			}
+			//path = fs::canonical(path);
+			path = path.lexically_normal();
+
+			fmt::print("FILE: {}\n", path);
+
+			auto src_path = fs::path(config_.source_dir);
+			auto rel_path = path.lexically_relative(src_path);
+
+			if(path != src_path / rel_path) {
+				fmt::print("ERROR: file '{}' is outside source directory '{}'\n",
+					path, src_path);
+				std::exit(1);
+			}
+
+			process_mkd(path);
+		}
+	}
+
 	process_paths();
 	process_tags();
 	process_index();

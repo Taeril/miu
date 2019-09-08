@@ -283,7 +283,7 @@ sqlite3_int64 Cache::add_entry(Entry const& entry) {
 
 void Cache::add_tag(sqlite3_int64 entry, std::string const& tag) {
 	const char sql_upsert[] = R"~(
-		INSERT INTO tagged_entries(tag, entry) VALUES(?, ?)
+		INSERT OR IGNORE INTO tagged_entries(tag, entry) VALUES(?, ?)
 	)~";
 	constexpr const int sql_upsert_len = length(sql_upsert);
 
