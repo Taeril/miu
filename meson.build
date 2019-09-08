@@ -1,6 +1,6 @@
 project('miu', 'cpp',
   version: '0.1.0',
-  license: 'MIT', 
+  license: 'MIT',
   default_options: ['warning_level=3', 'cpp_std=c++17']
 )
 
@@ -8,7 +8,7 @@ cpp = meson.get_compiler('cpp')
 if cpp.get_argument_syntax() == 'gcc'
   add_project_arguments('-Wconversion', language: 'cpp')
 
-  # TODO: handle linking requirements 
+  # TODO: handle linking requirements
   # GNU implementation requires linking with -lstdc++fs
   add_project_link_arguments('-lstdc++fs', language : 'cpp')
   # LLVM implementation requires linking with -lc++fs

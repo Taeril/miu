@@ -1,0 +1,11 @@
+{% entries %}
+<article>
+<hr>
+<h1><a href="{{ url|raw }}">{{ title }}</a></h1>
+<div><small>
+	<time datetime="{{ datetime }}">{{ date }}</time>
+	Tags: {% tags %}[<a href="{{ url|raw }}">{{ name }}</a>]{% end %}
+</small></div>
+{{ content|raw }}
+</article>
+{% end %}

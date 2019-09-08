@@ -13,6 +13,14 @@
 #include <kvc/kvc.hpp>
 #include <mkd/mkd.hpp>
 
+#include "entry_tmpl.h"
+#include "feed_tmpl.h"
+#include "footer_tmpl.h"
+#include "header_tmpl.h"
+#include "index_tmpl.h"
+#include "list_tmpl.h"
+#include "page_tmpl.h"
+
 #define LOG_INFO(...) do { if(config_.verbose > 0) fmt::print(__VA_ARGS__); } while(0)
 #define LOG_TRACE(...) do { if(config_.verbose > 1) fmt::print(__VA_ARGS__); } while(0)
 #define LOG_ERROR(...) do { fmt::print(stderr, __VA_ARGS__); } while(0)
@@ -60,17 +68,30 @@ namespace miu {
 App::App(int argc, char** argv) : config_(argc, argv),
 	cache_(cond_rm(config_.cache_db, config_.rebuild)) {
 
-	std::string header = read_file(config_.template_dir + "/header.tmpl");
-	std::string footer = read_file(config_.template_dir + "/footer.tmpl");
+	std::string header = init_tmpl("header.tmpl", header_tmpl);
+	std::string footer = init_tmpl("footer.tmpl", footer_tmpl);
 
-	index_tmpl_.parse(header + read_file(config_.template_dir + "/index.tmpl") + footer);
-	list_tmpl_.parse(header + read_file(config_.template_dir + "/list.tmpl") + footer);
-	page_tmpl_.parse(header + read_file(config_.template_dir + "/page.tmpl") + footer);
-	entry_tmpl_.parse(header + read_file(config_.template_dir + "/entry.tmpl") + footer);
-	feed_tmpl_.parse(read_file(config_.template_dir + "/feed.tmpl"));
+	index_tmpl_.parse(header + init_tmpl("index.tmpl", index_tmpl) + footer);
+	list_tmpl_.parse(header + init_tmpl("list.tmpl", list_tmpl) + footer);
+	page_tmpl_.parse(header + init_tmpl("page.tmpl", page_tmpl) + footer);
+	entry_tmpl_.parse(header + init_tmpl("entry.tmpl", entry_tmpl) + footer);
+	feed_tmpl_.parse(init_tmpl("feed.tmpl", feed_tmpl));
 }
 
 App::~App() {
+}
+
+std::string App::init_tmpl(std::string const& path, const char* default_) {
+	auto p = fs::path(config_.template_dir) / path;
+
+	if(fs::exists(p) || fs::is_regular_file(p)) {
+		return read_file(p);
+	}
+
+	LOG_TRACE("TEMPLATE: create {}\n", path);
+	fs::create_directories(config_.template_dir);
+	write_file(p, default_);
+	return default_;
 }
 
 int App::run() {

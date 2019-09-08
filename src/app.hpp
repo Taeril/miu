@@ -32,6 +32,8 @@ class App {
 		std::unordered_set<std::string> paths_;
 		std::unordered_set<std::string> tags_;
 
+		std::string init_tmpl(std::string const& path, const char* default_);
+
 		mtime_t update_file(std::string const& info,
 			fs::path const& src, fs::path const& dst);
 		mtime_t create_file(std::string const& info, std::string const& data,

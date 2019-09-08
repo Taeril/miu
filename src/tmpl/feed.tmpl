@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+
+<title>{{ title }}</title>
+<link href="{{ feed_url|raw }}" rel="self" />
+<link href="{{ index_url|raw }}" rel="alternate" />
+<id>{{ id }}</id>
+<updated>{{ updated }}</updated>
+{% entries %}
+<entry>
+	<title>{{ title }}</title>
+	<link href="{{ url|raw }}" />
+	<id>{{ id }}</id>
+	<updated>{{ datetime }}</updated>
+	<content type="html">{{ content|html }}</content>
+	<author><name>{{ author }}</name></author>
+</entry>
+{% end %}
+</feed>

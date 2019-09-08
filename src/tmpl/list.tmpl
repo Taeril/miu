@@ -1,0 +1,11 @@
+<ul class="list">
+{% list %}	<li>
+		<a href="{{ url|raw }}">{{ name }}</a>
+	</li>
+{% end %}</ul>
+<ul class="entries">
+{% entries %}	<li>
+		[<time datetime="{{ datetime }}">{{ date }}</time>]
+		<a href="{{ url|raw }}">{{ title }}</a>
+	</li>
+{% end %}</ul>
