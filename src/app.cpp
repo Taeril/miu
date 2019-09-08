@@ -39,6 +39,20 @@ namespace {
 		}
 		return file;
 	}
+
+	void write_file(fs::path const& path, std::string const& data) {
+		std::ofstream out(path);
+		out.write(data.c_str(), data.size());
+	}
+
+	miu::mtime_t get_mtime(fs::path const& path) {
+		return fs::last_write_time(path);
+	}
+
+	std::string format_mtime(miu::mtime_t mtime) {
+		std::time_t cftime = miu::mtime_t::clock::to_time_t(mtime);
+		return fmt::format("{:%Y-%m-%dT%H:%M:%SZ}", *gmtime(&cftime));
+	}
 }
 
 namespace miu {
@@ -99,19 +113,6 @@ int App::run() {
 	return 0;
 }
 
-void write_file(fs::path const& path, std::string const& data) {
-	std::ofstream out(path);
-	out.write(data.c_str(), data.size());
-}
-
-mtime_t get_mtime(fs::path const& path) {
-	return fs::last_write_time(path);
-}
-
-std::string format_mtime(mtime_t mtime) {
-	std::time_t cftime = mtime_t::clock::to_time_t(mtime);
-	return fmt::format("{:%Y-%m-%dT%H:%M:%SZ}", *gmtime(&cftime));
-}
 
 mtime_t App::update_file(std::string const& info,
 	fs::path const& src, fs::path const& dst) {
