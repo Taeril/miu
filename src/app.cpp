@@ -6,7 +6,12 @@
 #include <algorithm>
 
 #include <fmt/core.h>
+#if __has_include(<fmt/time.h>) && FMT_VERSION < 60000
 #include <fmt/time.h>
+#endif
+#if __has_include(<fmt/chrono.h>)
+#include <fmt/chrono.h>
+#endif
 
 #include <kvc/utils.hpp>
 #include <mkd/utils.hpp>
@@ -35,7 +40,7 @@ struct formatter<fs::path> {
 
 	template <typename FormatContext>
 	auto format(fs::path const& p, FormatContext &ctx) {
-		return format_to(ctx.begin(), "{}", p.string());
+		return format_to(ctx.out(), "{}", p.string());
 	}
 };
 }
@@ -59,7 +64,7 @@ namespace {
 
 	std::string format_mtime(miu::mtime_t mtime) {
 		std::time_t cftime = miu::mtime_t::clock::to_time_t(mtime);
-		return fmt::format("{:%Y-%m-%dT%H:%M:%SZ}", *gmtime(&cftime));
+		return fmt::format("{:%Y-%m-%dT%H:%M:%SZ}", *std::gmtime(&cftime));
 	}
 }
 

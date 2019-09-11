@@ -7,7 +7,12 @@
 #include "filesystem.hpp"
 
 #include <fmt/core.h>
+#if __has_include(<fmt/time.h>) && FMT_VERSION < 60000
 #include <fmt/time.h>
+#endif
+#if __has_include(<fmt/chrono.h>)
+#include <fmt/chrono.h>
+#endif
 //#include <fmt/ostream.h>
 
 // https://github.com/adishavit/argh
@@ -148,8 +153,8 @@ Config::Config(int argc, char** argv) {
 	cfg.set("home_url", base_url);
 	cfg.set("tags_url", base_url + "tags/");
 
-	time_t ctime = time(nullptr);
-	cfg.set("now", fmt::format("{:%Y-%m-%dT%H:%M:%SZ}", *gmtime(&ctime)));
+	std::time_t ctime = std::time(nullptr);
+	cfg.set("now", fmt::format("{:%Y-%m-%dT%H:%M:%SZ}", *std::gmtime(&ctime)));
 }
 
 Config::~Config() {
