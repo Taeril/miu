@@ -590,7 +590,7 @@ void App::process_index() {
 	feed->set("id", feed_base_url);
 
 	int num_entries = std::stoi(config_.cfg.get_value("num_entries", "5"));
-	int short_size = std::stoi(config_.cfg.get_value("short_size", "400"));
+	int short_size = std::stoi(config_.cfg.get_value("short_size", "200"));
 
 	auto block_entries = root->block("entries");
 	auto feed_entries = feed->block("entries");
