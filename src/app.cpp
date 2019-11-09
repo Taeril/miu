@@ -348,7 +348,11 @@ void App::process_mkd(fs::path const& src_path) {
 		auto entry_id = cache_.add_entry(entry);
 
 		if(!is_page) {
-			paths_.insert(base.parent_path());
+			auto path = base.parent_path();
+			while(!path.empty()) {
+				paths_.insert(path);
+				path = path.parent_path();
+			}
 			if(tags && tags->is_array) {
 				for(auto const& tag : tags->values) {
 					cache_.add_tag(entry_id, tag);
