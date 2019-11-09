@@ -617,9 +617,13 @@ void App::process_index() {
 		mkd::Parser parser;
 		std::string html = parser.parse(md);
 
-		auto pos = md.find_first_of("\r\n", short_size);
-		if(pos != std::string::npos && (md[pos+1] == '\r' || md[pos+1] == '\n')) {
-			md = md.substr(0, pos);
+		auto pos = md.find('\n', short_size);
+		while(pos != std::string::npos) {
+			if(md[pos+1] == '\r' || md[pos+1] == '\n') {
+				md = md.substr(0, pos);
+				break;
+			}
+			pos = md.find('\n', pos+1);
 		}
 		pos = md.find("\n```");
 		if(pos != std::string::npos) {
