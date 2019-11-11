@@ -253,17 +253,33 @@ void App::process_mkd(fs::path const& src_path) {
 		}
 	}
 
+	auto path = src_path.lexically_relative(config_.source_dir);
+
+	auto pages_dirs = config_.cfg.get("pages_dirs");
+	bool auto_page = false;
+	if(pages_dirs && pages_dirs->is_array) {
+		// use of fs::path("/") makes same in config:
+		// "" and "/"
+		// "foo" and "/foo"
+		auto const p = fs::path("/") / path.parent_path();
+		for(auto const& d : pages_dirs->values) {
+			auto const v = fs::path("/") / d;
+			if(v == p) {
+				auto_page = true;
+				break;
+			}
+		}
+	}
+
 	mkd::Parser parser;
 	std::string html = parser.parse(md);
 
 	auto type = meta.get_value("type", "entry");
-	bool is_page = type == "page";
+	bool is_page = auto_page || type == "page";
 	tmpl::Template& tmpl = is_page ? page_tmpl_ : entry_tmpl_;
 
 	auto root = tmpl.data();
 	root->clear();
-
-	auto path = src_path.lexically_relative(config_.source_dir);
 
 	std::string title = meta.get_value("title", parser.title());
 	std::string slug = meta.get_value("slug", parser.slug());
