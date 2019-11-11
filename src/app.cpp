@@ -143,6 +143,11 @@ int App::run() {
 mtime_t App::update_file(std::string const& info,
 	fs::path const& src, fs::path const& dst) {
 
+	if(!fs::exists(src) || !fs::is_regular_file(src)) {
+		LOG_INFO("FILE NOT FOUND: {}\n", src);
+		return mtime_t::min();
+	}
+
 	auto src_mtime = get_mtime(src);
 
 	if(!config_.rebuild && fs::exists(dst)) {
@@ -296,7 +301,11 @@ void App::process_mkd(fs::path const& src_path) {
 			meta_files->is_array = true;
 		}
 		for(auto const& file : parser.files()) {
-			meta_files->values.push_back(file);
+			// skip directories
+			// TODO: rethink this hack
+			if(file[file.size()-1] != '/') {
+				meta_files->values.push_back(file);
+			}
 		}
 
 		auto& vs = meta_files->values;
