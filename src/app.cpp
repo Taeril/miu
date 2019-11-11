@@ -274,8 +274,8 @@ void App::process_mkd(fs::path const& src_path) {
 	mkd::Parser parser;
 	std::string html = parser.parse(md);
 
-	auto type = meta.get_value("type", "entry");
-	bool is_page = auto_page || type == "page";
+	auto type = meta.get_value("type", auto_page ? "page" : "entry");
+	bool is_page = type == "page";
 	tmpl::Template& tmpl = is_page ? page_tmpl_ : entry_tmpl_;
 
 	auto root = tmpl.data();
