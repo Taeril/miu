@@ -646,21 +646,26 @@ void App::process_index() {
 		mkd::Parser parser;
 		std::string html = parser.parse(md);
 
-		auto pos = md.find('\n', short_size);
-		while(pos != std::string::npos) {
-			if(md[pos+1] == '\r' || md[pos+1] == '\n') {
-				md = md.substr(0, pos);
-				break;
+		auto pos = md.find("<!-- cut -->");
+		if(pos != std::string::npos) {
+			md = md.substr(0, pos);
+		} else {
+			pos = md.find('\n', short_size);
+			while(pos != std::string::npos) {
+				if(md[pos+1] == '\r' || md[pos+1] == '\n') {
+					md = md.substr(0, pos);
+					break;
+				}
+				pos = md.find('\n', pos+1);
 			}
-			pos = md.find('\n', pos+1);
-		}
-		pos = md.find("\n```");
-		if(pos != std::string::npos) {
-			md = md.substr(0, pos);
-		}
-		pos = md.find("\n    ");
-		if(pos != std::string::npos) {
-			md = md.substr(0, pos);
+			pos = md.find("\n```");
+			if(pos != std::string::npos) {
+				md = md.substr(0, pos);
+			}
+			pos = md.find("\n    ");
+			if(pos != std::string::npos) {
+				md = md.substr(0, pos);
+			}
 		}
 		std::string short_html = parser.parse(md);
 
