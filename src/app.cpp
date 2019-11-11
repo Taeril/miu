@@ -644,6 +644,8 @@ void App::process_index() {
 			}
 		}
 
+		auto md_size = md.size();
+
 		mkd::Parser parser;
 		std::string html = parser.parse(md);
 
@@ -678,6 +680,10 @@ void App::process_index() {
 		std::string path_slash = entry[PATH].empty() ? "" : entry[PATH] + "/";
 		e.set("url", base_url + path_slash + entry[SLUG] + "/");
 		e.set("content", short_html);
+
+		if(md.size() < md_size) {
+			e.set("read_more", "");
+		}
 
 		auto tags = meta.get("tags");
 		if(tags && tags->is_array) {
