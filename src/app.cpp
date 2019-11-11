@@ -335,6 +335,7 @@ void App::process_mkd(fs::path const& src_path) {
 
 	auto tags = meta.get("tags");
 	if(tags && tags->is_array) {
+		root->set("have_tags", "");
 		auto block = root->block("tags");
 		for(auto const& tag : tags->values) {
 			auto& t = block->add();
@@ -680,6 +681,7 @@ void App::process_index() {
 
 		auto tags = meta.get("tags");
 		if(tags && tags->is_array) {
+			e.set("have_tags", "");
 			auto block = e.block("tags");
 			for(auto const& tag : tags->values) {
 				auto& t = block->add();
