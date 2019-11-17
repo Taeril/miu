@@ -253,6 +253,35 @@ void App::process_mkd(fs::path const& src_path) {
 		}
 	}
 
+	// discover tags on last line
+	if(md.size() > 4 && !meta.get("tags")) {
+		auto pos = md.rfind('\n', md.size() - 2);
+		if(pos != std::string::npos && md.size() - pos > 2 && md[pos + 1] == '#' &&
+			md[pos + 2] != ' ' && md[pos + 2] != '\t' && md[pos + 2] != '#') {
+			auto line = md.substr(pos + 1);
+			const auto md_end = pos;
+
+			std::vector<std::string> tags;
+			std::string::size_type end;
+			while((end = md.find_first_of(" ,.;\r\n\t", pos)) != std::string::npos) {
+				const auto len = end - pos;
+				if(len > 1) {
+					tags.emplace_back(md.substr(pos + 1, len - 1));
+				}
+				pos = md.find('#', end + 1);
+				if(pos == std::string::npos) {
+					break;
+				}
+			}
+
+			if(tags.size() > 0) {
+				meta.add("tags", tags);
+			}
+
+			md = md.substr(0, md_end);
+		}
+	}
+
 	auto path = src_path.lexically_relative(config_.source_dir);
 
 	auto pages_dirs = config_.cfg.get("pages_dirs");
