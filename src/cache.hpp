@@ -29,6 +29,7 @@ struct Entry {
 
 	std::optional<std::string> title;
 
+	std::string mtime;
 	std::string datetime;
 	bool update;
 };

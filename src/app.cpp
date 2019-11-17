@@ -297,10 +297,12 @@ void App::process_mkd(fs::path const& src_path) {
 
 	auto src_mtime = get_mtime(src_path);
 	auto src_datetime = format_mtime(src_mtime);
+	bool updated = false;
 	if(auto created = meta.get("created"); !created) {
 		meta.set("created", src_datetime);
 	} else if(created->value != src_datetime) {
 		meta.set("updated", src_datetime);
+		updated = true;
 	}
 
 	if(is_page) {
@@ -368,8 +370,9 @@ void App::process_mkd(fs::path const& src_path) {
 		entry.slug = slug;
 		entry.file = "index.html";
 		entry.title = title;
-		entry.datetime = format_mtime(md_mtime);
-		entry.update = false;
+		entry.mtime = format_mtime(md_mtime);
+		entry.datetime = meta.get_value("created", src_datetime);
+		entry.update = updated;
 
 		auto entry_id = cache_.add_entry(entry);
 

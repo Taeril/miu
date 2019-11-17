@@ -238,7 +238,7 @@ sqlite3_int64 Cache::add_entry(Entry const& entry) {
 	}
 	bind_or_exit(stmt, 7, entry.datetime, "add_entry(bind created)");
 	if(entry.update) {
-		bind_or_exit(stmt, 8, entry.datetime, "add_entry(bind updated)");
+		bind_or_exit(stmt, 8, entry.mtime, "add_entry(bind updated)");
 	} else {
 		bind_or_exit(stmt, 8, nullptr, 0, "add_entry(bind updated=NULL)");
 	}
