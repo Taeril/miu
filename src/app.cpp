@@ -406,6 +406,13 @@ void App::process_mkd(fs::path const& src_path) {
 	root->set("url", base_url + base.string() + "/");
 	root->set("content", html);
 
+	if(updated) {
+		root->set("is_updated", "");
+		auto updated_datetime = meta.get_value("updated", src_datetime);
+		root->set("updated_datetime", updated_datetime);
+		root->set("updated_date", updated_datetime.substr(0, 10));
+	}
+
 
 	// update .md file
 	write_file(src_path, separator + meta.to_string() + separator + md);
@@ -682,7 +689,9 @@ void App::process_index() {
 	auto feed_entries = feed->block("entries");
 	cache_.last_entries(num_entries, [&](QueryResult entry) {
 		if(is_first) {
-			feed->set("updated", entry[DATETIME]);
+			feed->set("updated",
+				entry[UPDATED].empty() ? entry[DATETIME] : entry[UPDATED]
+			);
 			is_first = false;
 		}
 
@@ -758,6 +767,16 @@ void App::process_index() {
 		fe.set("datetime", entry[DATETIME]);
 		fe.set("content", short_html);
 		fe.set("id", feed_base_url + path_slash + entry[SLUG] + "/");
+
+		if(!entry[UPDATED].empty()) {
+			e.set("is_updated", "");
+			e.set("updated_datetime", entry[UPDATED]);
+			e.set("updated_date", entry[UPDATED].substr(0, 10));
+
+			fe.set("updated_datetime", entry[UPDATED]);
+		} else {
+			fe.set("updated_datetime", entry[DATETIME]);
+		}
 	});
 
 	{

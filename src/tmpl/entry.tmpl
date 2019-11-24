@@ -4,6 +4,7 @@
 <div><small>
 	<time datetime="{{ datetime }}">{{ date }}</time>
 	{% have_tags %} | Tags:{% tags %} [<a href="{{ url|raw }}">{{ name }}</a>]{% end %}{% end %}
+	{% is_updated %}<br>Updated: <time datetime="{{ updated_datetime }}">{{ updated_date }}</time>{% end %}
 </small></div>
 {{ content|raw }}
 </article>
