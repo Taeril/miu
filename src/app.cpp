@@ -66,6 +66,29 @@ namespace {
 		std::time_t cftime = miu::mtime_t::clock::to_time_t(mtime);
 		return fmt::format("{:%Y-%m-%dT%H:%M:%SZ}", *std::gmtime(&cftime));
 	}
+
+	bool is_datetime(std::string const& value) {
+		if(value.size() != 20) {
+			return false;
+		}
+
+		auto is_number = [](char c){ return c >= '0' && c <= '9'; };
+		const char format[] = "$$$$-$$-$$T$$:$$:$$Z";
+		size_t idx = 0;
+		for(auto const v : format) {
+			if(v == '$') {
+				if(!is_number(value[idx])) {
+					return false;
+				}
+			} else if(value[idx] != v) {
+				return false;
+			}
+
+			++idx;
+		}
+
+		return true;
+	}
 }
 
 namespace miu {
@@ -330,8 +353,11 @@ void App::process_mkd(fs::path const& src_path) {
 	if(auto created = meta.get("created"); !created) {
 		meta.set("created", src_datetime);
 	} else if(created->value != src_datetime) {
-		meta.set("updated", src_datetime);
-		updated = true;
+		auto meta_updated = meta.get("updated");
+		updated = meta_updated && !meta_updated->is_array;
+		if(updated && !is_datetime(meta_updated->value)) {
+			meta_updated->value = src_datetime;
+		}
 	}
 
 	if(is_page) {
