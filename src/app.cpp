@@ -375,10 +375,12 @@ void App::process_mkd(fs::path const& src_path) {
 		}
 	}
 
+	auto entry_datetime = meta.get_value("created", src_datetime);
+
 	config2tmpl(config_.cfg, root);
 	config2tmpl(meta, root);
-	root->set("datetime", src_datetime);
-	root->set("date", src_datetime.substr(0, 10));
+	root->set("datetime", entry_datetime);
+	root->set("date", entry_datetime.substr(0, 10));
 	root->set("url", base_url + base.string() + "/");
 	root->set("content", html);
 
