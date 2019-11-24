@@ -374,11 +374,7 @@ void App::process_mkd(fs::path const& src_path) {
 			meta_files->is_array = true;
 		}
 		for(auto const& file : parser.files()) {
-			// skip directories
-			// TODO: rethink this hack
-			if(file[file.size()-1] != '/') {
-				meta_files->values.push_back(file);
-			}
+			meta_files->values.push_back(file);
 		}
 
 		auto& vs = meta_files->values;
