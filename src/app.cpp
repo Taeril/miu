@@ -212,7 +212,7 @@ void App::process_static() {
 			entry.slug = {};
 			entry.file = path.filename();
 			entry.title = {};
-			entry.datetime = format_mtime(mtime);
+			entry.created = format_mtime(mtime);
 			entry.update = false;
 
 			cache_.add_entry(entry);
@@ -401,8 +401,8 @@ void App::process_mkd(fs::path const& src_path) {
 		entry.slug = slug;
 		entry.file = "index.html";
 		entry.title = title;
-		entry.mtime = format_mtime(md_mtime);
-		entry.datetime = meta.get_value("created", src_datetime);
+		entry.created = meta.get_value("created", src_datetime);
+		entry.updated = meta.get_value("updated", src_datetime);
 		entry.update = updated;
 
 		auto entry_id = cache_.add_entry(entry);
@@ -437,7 +437,7 @@ void App::process_mkd(fs::path const& src_path) {
 			entry.slug = slug;
 			entry.file = file;
 			entry.title = {};
-			entry.datetime = format_mtime(code_mtime);
+			entry.created = format_mtime(code_mtime);
 			entry.update = false;
 
 			cache_.add_entry(entry);
@@ -462,7 +462,7 @@ void App::process_mkd(fs::path const& src_path) {
 				entry.slug = slug;
 				entry.file = file;
 				entry.title = {};
-				entry.datetime = format_mtime(file_mtime);
+				entry.created = format_mtime(file_mtime);
 				entry.update = false;
 
 				cache_.add_entry(entry);
@@ -534,7 +534,7 @@ void App::process_paths() {
 		entry.slug = {};
 		entry.file = "index.html";
 		entry.title = {};
-		entry.datetime = config_.cfg.get_value("now", "now");
+		entry.created = config_.cfg.get_value("now", "now");
 		entry.update = false;
 
 		cache_.add_entry(entry);
@@ -578,7 +578,7 @@ void App::process_tags() {
 	entry.slug = {};
 	entry.file = "index.html";
 	entry.title = {};
-	entry.datetime = config_.cfg.get_value("now", "now");
+	entry.created = config_.cfg.get_value("now", "now");
 	entry.update = false;
 
 	cache_.add_entry(entry);
@@ -614,7 +614,7 @@ void App::process_tags() {
 		entry.slug = {};
 		entry.file = "index.html";
 		entry.title = {};
-		entry.datetime = config_.cfg.get_value("now", "now");
+		entry.created = config_.cfg.get_value("now", "now");
 		entry.update = false;
 
 		cache_.add_entry(entry);
@@ -752,7 +752,7 @@ void App::process_index() {
 		entry.slug = {};
 		entry.file = "index.html";
 		entry.title = {};
-		entry.datetime = config_.cfg.get_value("now", "now");
+		entry.created = config_.cfg.get_value("now", "now");
 		entry.update = false;
 
 		cache_.add_entry(entry);
@@ -772,7 +772,7 @@ void App::process_index() {
 		entry.slug = {};
 		entry.file = "feed.xml";
 		entry.title = {};
-		entry.datetime = config_.cfg.get_value("now", "now");
+		entry.created = config_.cfg.get_value("now", "now");
 		entry.update = false;
 
 		cache_.add_entry(entry);
