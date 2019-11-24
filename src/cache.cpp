@@ -222,9 +222,9 @@ sqlite3_int64 Cache::tag_id(std::string const& tag) {
 sqlite3_int64 Cache::add_entry(Entry const& entry) {
 	const char sql_upsert[] = R"~(
 		INSERT
-			--           1     2       3     4     5     6      7
-			INTO entries(type, source, path, slug, file, title, created)
-			VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7)
+			--           1     2       3     4     5     6      7        8
+			INTO entries(type, source, path, slug, file, title, created, updated)
+			VALUES(?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
 		ON CONFLICT(path, slug, file) DO UPDATE
 			SET type = ?1, source = ?2, title = ?6, updated = ?8
 			WHERE path = ?3 AND slug = ?4 AND file = ?5
@@ -321,7 +321,12 @@ void Cache::list_things(sqlite3_stmt* stmt, int count, QueryCallback cb) {
 		if(rc == SQLITE_ROW) {
 			std::vector<std::string> result;
 			for(int i=0; i<count; ++i) {
-				result.emplace_back((char*)sqlite3_column_text(stmt, i));
+				auto value = sqlite3_column_text(stmt, i);
+				if(value) {
+					result.emplace_back((char*)value);
+				} else {
+					result.emplace_back("");
+				}
 			}
 			cb(result);
 		} else if(rc == SQLITE_DONE) {
@@ -336,10 +341,10 @@ void Cache::list_things(sqlite3_stmt* stmt, int count, QueryCallback cb) {
 
 void Cache::last_entries(int count, QueryCallback cb) {
 	const char sql_select[] = R"~(
-		SELECT name as path, slug, file, title, created, source
+		SELECT name as path, slug, file, title, created, updated, source
 		FROM entries, paths
 		WHERE type = ? AND paths.id = entries.path
-		ORDER BY created DESC
+		ORDER BY IFNULL(updated, created) DESC
 		LIMIT ?
 	)~";
 	constexpr const int sql_select_len = length(sql_select);
@@ -351,7 +356,7 @@ void Cache::last_entries(int count, QueryCallback cb) {
 	bind_or_exit(stmt, 1, static_cast<int>(Type::Entry), "last_entries(bind type)");
 	bind_or_exit(stmt, 2, count, "last_entries(bind limit)");
 
-	list_things(stmt, 6, cb);
+	list_things(stmt, 7, cb);
 }
 
 void Cache::list_subpaths(sqlite3_int64 path, QueryCallback cb) {

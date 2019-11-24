@@ -352,8 +352,8 @@ void App::process_mkd(fs::path const& src_path) {
 	bool updated = false;
 	if(auto created = meta.get("created"); !created) {
 		meta.set("created", src_datetime);
-	} else if(created->value != src_datetime) {
-		auto meta_updated = meta.get("updated");
+	}
+	if(auto meta_updated = meta.get("updated"); meta_updated) {
 		updated = meta_updated && !meta_updated->is_array;
 		if(updated && !is_datetime(meta_updated->value)) {
 			meta_updated->value = src_datetime;
@@ -644,7 +644,7 @@ void App::process_tags() {
 }
 
 void App::process_index() {
-	enum { PATH, SLUG, FILE_, TITLE, DATETIME, SOURCE };
+	enum { PATH, SLUG, FILE_, TITLE, DATETIME, UPDATED, SOURCE };
 
 	if(paths_.empty()) {
 		return;
