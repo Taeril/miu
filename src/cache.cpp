@@ -32,6 +32,20 @@ bool Cache::open(std::string path) {
 	rc = sqlite3_open_v2(path.c_str(), &db_, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, nullptr);
 	if(rc == SQLITE_OK) {
 		sqlite3_extended_result_codes(db_, 1);
+
+#ifdef LOG_SQL
+		sqlite3_trace_v2(db_, SQLITE_TRACE_STMT,
+			[](unsigned, void* c, void* p, void*) -> int {
+			Cache* cache = (Cache*)c;
+			if(cache->log_sql()) {
+				sqlite3_stmt* stmt = (sqlite3_stmt*)p;
+				char* sql = sqlite3_expanded_sql(stmt);
+				fmt::print("----------\n{}\n----------\n", sql);
+			}
+			return 0;
+		}, this);
+#endif
+
 		return create();
 	}
 

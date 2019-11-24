@@ -57,10 +57,18 @@ class Cache {
 		void list_entries_path(sqlite3_int64 path, QueryCallback cb);
 		void list_entries_tag(sqlite3_int64 tag, QueryCallback cb);
 		void list_tags(QueryCallback cb);
+
+#ifdef LOG_SQL
+		void log_sql(bool value) { log_sql_ = value; }
+		bool log_sql() { return log_sql_; }
+#endif
 	private:
 		std::string path_;
 		sqlite3* db_ = nullptr;
 		bool created_ = false;
+#ifdef LOG_SQL
+		bool log_sql_ = false;
+#endif
 
 		void err_exit(std::string msg, int rc);
 
